@@ -43,6 +43,13 @@ const INITIAL_FEED = [
 const colors = ["#e63946","#2a9d8f","#e9c46a","#f4a261","#457b9d","#8338ec","#06d6a0"];
 const Avatar = ({ user, size = 40 }) => {
   const color = colors[user.id % colors.length];
+  if (user.photo) {
+    return (
+      <div style={{ width:size, height:size, borderRadius:"50%", flexShrink:0, border:"2px solid rgba(255,255,255,0.18)", overflow:"hidden", background:"#222" }}>
+        <img src={user.photo} alt={user.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+      </div>
+    );
+  }
   return (
     <div style={{ width:size, height:size, borderRadius:"50%", background:`linear-gradient(135deg, ${color}, ${color}88)`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:size*0.32, color:"#fff", flexShrink:0, border:"2px solid rgba(255,255,255,0.12)" }}>
       {user.avatar}
@@ -131,11 +138,7 @@ const CommentsModal = ({ post, onClose, myProfile, allComments, onAddComment }) 
         </div>
         {/* Input area */}
         <div style={{ padding:"10px 14px 16px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:9, alignItems:"center", flexShrink:0 }}>
-          {myProfile && (
-            <div style={{ width:32, height:32, borderRadius:"50%", background:`linear-gradient(135deg,${colors[myProfile.id % colors.length]},${colors[myProfile.id % colors.length]}88)`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:"#fff", flexShrink:0, border:"2px solid rgba(255,255,255,0.1)" }}>
-              {myProfile.avatar}
-            </div>
-          )}
+          {myProfile && <Avatar user={myProfile} size={32} />}
           <input
             value={text}
             onChange={e => setText(e.target.value)}
@@ -286,6 +289,17 @@ export default function SportSquad() {
   const [commentPost, setCommentPost] = useState(null);
   const [sharePost, setSharePost] = useState(null);
   const [allComments, setAllComments] = useState(INITIAL_COMMENTS);
+  const photoInputRef = React.useRef(null);
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setMyProfile(p => ({ ...p, photo: ev.target.result }));
+    };
+    reader.readAsDataURL(file);
+  };
   const addComment = (postId, comment) => {
     setAllComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), comment] }));
     setFeedPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments + 1 } : p));
@@ -293,10 +307,10 @@ export default function SportSquad() {
 
   const handleSignup = () => {
     if (!signupData.name || !signupData.email) return;
-    setMyProfile({ id:99, name:signupData.name, handle:"@"+signupData.name.toLowerCase().replace(/\s/g,""), avatar:signupData.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase(), sports:signupData.sports, bio:"Sports lover 🏆", followers:0, following:0, cover:"#1a3a47" });
+    setMyProfile({ id:99, name:signupData.name, handle:"@"+signupData.name.toLowerCase().replace(/\s/g,""), avatar:signupData.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase(), sports:signupData.sports, bio:"Sports lover 🏆", followers:0, following:0, cover:"#1a3a47", photo:null });
     setLoggedIn(true);
   };
-  const handleLogin = () => { setMyProfile({ ...SAMPLE_USERS[0], id:99 }); setLoggedIn(true); };
+  const handleLogin = () => { setMyProfile({ ...SAMPLE_USERS[0], id:99, photo:null }); setLoggedIn(true); };
   const toggleSport = s => setSignupData(p=>({ ...p, sports:p.sports.includes(s)?p.sports.filter(x=>x!==s):[...p.sports,s] }));
   const toggleFollow = id => setFollowed(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   const toggleLike = id => setFeedLikes(p=>({ ...p,[id]:!p[id] }));
@@ -364,7 +378,7 @@ export default function SportSquad() {
 
   return (
     <div style={{ minHeight:"100vh", background:"#0d1117", fontFamily:"'DM Sans',sans-serif", maxWidth:480, margin:"0 auto", position:"relative" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap'); *{box-sizing:border-box} input,textarea{outline:none} input::placeholder,textarea::placeholder{color:#555} ::-webkit-scrollbar{width:0}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap'); *{box-sizing:border-box} input,textarea{outline:none} input::placeholder,textarea::placeholder{color:#555} ::-webkit-scrollbar{width:0} .cam-overlay{opacity:0!important} div:hover>.cam-overlay{opacity:1!important}`}</style>
       {queuePost && <QueueModal post={queuePost} onClose={()=>setQueuePost(null)} />}
       {commentPost && <CommentsModal post={commentPost} onClose={()=>setCommentPost(null)} myProfile={myProfile} allComments={allComments} onAddComment={addComment} />}
       {sharePost && <ShareModal post={sharePost} onClose={()=>setSharePost(null)} />}
@@ -553,8 +567,22 @@ export default function SportSquad() {
         {tab==="profile" && myProfile && (
           <div>
             <div style={{ height:110, background:`linear-gradient(135deg,${myProfile.cover},#7c3aed44)`, position:"relative" }}>
-              <div style={{ position:"absolute", bottom:-22, left:14, border:"3px solid #0d1117", borderRadius:"50%" }}>
-                <Avatar user={myProfile} size={60} />
+              <div style={{ position:"absolute", bottom:-22, left:14 }}>
+                <div style={{ position:"relative", display:"inline-block", cursor:"pointer" }}
+                  onClick={() => photoInputRef.current && photoInputRef.current.click()}>
+                  <div style={{ border:"3px solid #0d1117", borderRadius:"50%", overflow:"hidden" }}>
+                    <Avatar user={myProfile} size={60} />
+                  </div>
+                  {/* Camera overlay on hover */}
+                  <div className="cam-overlay" style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.2s", pointerEvents:"none" }}>
+                    <span style={{ fontSize:18 }}>📷</span>
+                  </div>
+                  {/* Small + badge */}
+                  <div style={{ position:"absolute", bottom:2, right:2, width:18, height:18, borderRadius:"50%", background:"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"2px solid #0d1117", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <span style={{ color:"#fff", fontSize:10, fontWeight:800, lineHeight:1 }}>+</span>
+                  </div>
+                </div>
+                <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display:"none" }} />
               </div>
             </div>
             <div style={{ padding:"30px 14px 14px" }}>
@@ -601,6 +629,26 @@ export default function SportSquad() {
               ) : (
                 <div>
                   <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", margin:"0 0 16px", fontSize:17 }}>Edit Profile</h3>
+                  {/* Profile photo picker */}
+                  <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:18 }}>
+                    <div style={{ position:"relative", cursor:"pointer" }} onClick={() => photoInputRef.current && photoInputRef.current.click()}>
+                      <Avatar user={myProfile} size={64} />
+                      <div style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <span style={{ fontSize:20 }}>📷</span>
+                      </div>
+                    </div>
+                    <div>
+                      <button onClick={() => photoInputRef.current && photoInputRef.current.click()} style={{ background:"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", display:"block", marginBottom:6 }}>
+                        📸 Upload Photo
+                      </button>
+                      {myProfile.photo && (
+                        <button onClick={() => setMyProfile(p => ({ ...p, photo: null }))} style={{ background:"rgba(230,57,70,0.1)", border:"1px solid rgba(230,57,70,0.3)", borderRadius:10, padding:"6px 12px", color:"#e63946", fontSize:11, cursor:"pointer" }}>
+                          Remove Photo
+                        </button>
+                      )}
+                      {!myProfile.photo && <div style={{ color:"#555", fontSize:11 }}>JPG, PNG, GIF supported</div>}
+                    </div>
+                  </div>
                   <input value={profileEdit.name} onChange={e=>setProfileEdit(p=>({...p,name:e.target.value}))} placeholder="Name" style={{...inp(),marginBottom:9}} />
                   <textarea value={profileEdit.bio} onChange={e=>setProfileEdit(p=>({...p,bio:e.target.value}))} placeholder="Bio" rows={3}
                     style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, padding:"11px 14px", color:"#fff", fontSize:14, resize:"none", marginBottom:13, outline:"none" }} />
