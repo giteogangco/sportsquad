@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 const SPORTS = [
   "⚽ Football","🏀 Basketball","🎾 Tennis","🏊 Swimming","🏋️ Gym","🏏 Cricket",
@@ -46,6 +46,159 @@ const Avatar = ({ user, size = 40 }) => {
   return (
     <div style={{ width:size, height:size, borderRadius:"50%", background:`linear-gradient(135deg, ${color}, ${color}88)`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:size*0.32, color:"#fff", flexShrink:0, border:"2px solid rgba(255,255,255,0.12)" }}>
       {user.avatar}
+    </div>
+  );
+};
+
+
+const INITIAL_COMMENTS = {
+  1: [
+    { id:1, userId:2, text:"Great game! Wish I was there 🔥", time:"1h ago" },
+    { id:2, userId:3, text:"What was the final formation?", time:"1h ago" },
+    { id:3, userId:4, text:"Count me in for next Sunday!", time:"30m ago" },
+  ],
+  2: [
+    { id:1, userId:1, text:"I'll take a slot! 🏊", time:"3h ago" },
+    { id:2, userId:5, text:"Is there parking nearby?", time:"2h ago" },
+  ],
+  3: [
+    { id:1, userId:2, text:"Beast mode activated 💪", time:"5h ago" },
+    { id:2, userId:4, text:"120kg! Absolute unit!", time:"4h ago" },
+    { id:3, userId:5, text:"What program are you running?", time:"2h ago" },
+  ],
+  4: [
+    { id:1, userId:1, text:"I'm in, mixed levels is perfect for me!", time:"22h ago" },
+    { id:2, userId:3, text:"Same court as last time?", time:"20h ago" },
+  ],
+  5: [
+    { id:1, userId:2, text:"I can play GK! What time exactly?", time:"20h ago" },
+    { id:2, userId:3, text:"Need subs too? I'm available", time:"18h ago" },
+    { id:3, userId:4, text:"Tagging @lenacruz she might know someone", time:"10h ago" },
+  ],
+};
+
+const CommentsModal = ({ post, onClose, myProfile, allComments, onAddComment }) => {
+  const postUser = SAMPLE_USERS.find(u => u.id === post.userId) || myProfile || SAMPLE_USERS[0];
+  const comments = allComments[post.id] || [];
+  const [text, setText] = React.useState("");
+  const submit = () => {
+    if (!text.trim()) return;
+    onAddComment(post.id, { id: Date.now(), userId: 99, text: text.trim(), time: "Just now" });
+    setText("");
+  };
+  const getUser = id => id === 99 ? myProfile : SAMPLE_USERS.find(u => u.id === id) || SAMPLE_USERS[0];
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:1000, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+      <div style={{ background:"#1a1f2e", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", maxHeight:"82vh", display:"flex", flexDirection:"column", border:"1px solid rgba(255,255,255,0.08)" }} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+          <div>
+            <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", fontSize:16, margin:0 }}>💬 Comments</h3>
+            <div style={{ color:"#555", fontSize:11, marginTop:2 }}>{postUser.name} · {post.sport}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.08)", border:"none", color:"#aaa", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:13 }}>✕</button>
+        </div>
+        {/* Original post preview */}
+        <div style={{ padding:"10px 18px", borderBottom:"1px solid rgba(255,255,255,0.04)", background:"rgba(255,255,255,0.02)", flexShrink:0 }}>
+          <div style={{ color:"#888", fontSize:12, lineHeight:1.4 }}>{post.content}</div>
+        </div>
+        {/* Comments list */}
+        <div style={{ overflowY:"auto", flex:1, padding:"10px 18px" }}>
+          {comments.length === 0 && (
+            <div style={{ textAlign:"center", color:"#444", fontSize:13, padding:"24px 0" }}>No comments yet. Be the first! 👇</div>
+          )}
+          {comments.map((c, i) => {
+            const u = getUser(c.userId);
+            if (!u) return null;
+            const col = colors[u.id % colors.length];
+            return (
+              <div key={c.id} style={{ display:"flex", gap:9, marginBottom:14 }}>
+                <div style={{ width:32, height:32, borderRadius:"50%", background:`linear-gradient(135deg,${col},${col}88)`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:"#fff", flexShrink:0, border:"2px solid rgba(255,255,255,0.1)" }}>
+                  {u.avatar}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:7, marginBottom:3 }}>
+                    <span style={{ color:"#fff", fontWeight:700, fontSize:12 }}>{u.name}</span>
+                    <span style={{ color:"#444", fontSize:10 }}>{c.time}</span>
+                  </div>
+                  <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:"4px 14px 14px 14px", padding:"8px 11px", color:"#ccc", fontSize:13, lineHeight:1.4 }}>
+                    {c.text}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Input area */}
+        <div style={{ padding:"10px 14px 16px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:9, alignItems:"center", flexShrink:0 }}>
+          {myProfile && (
+            <div style={{ width:32, height:32, borderRadius:"50%", background:`linear-gradient(135deg,${colors[myProfile.id % colors.length]},${colors[myProfile.id % colors.length]}88)`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:"#fff", flexShrink:0, border:"2px solid rgba(255,255,255,0.1)" }}>
+              {myProfile.avatar}
+            </div>
+          )}
+          <input
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            placeholder="Write a comment..."
+            style={{ flex:1, background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:22, padding:"9px 14px", color:"#fff", fontSize:13, outline:"none" }}
+          />
+          <button onClick={submit} style={{ background:text.trim()?"linear-gradient(135deg,#7c3aed,#00d2ff)":"rgba(255,255,255,0.07)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:text.trim()?"pointer":"default", flexShrink:0, transition:"background 0.2s" }}>
+            <span style={{ fontSize:15 }}>↑</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ShareModal = ({ post, onClose }) => {
+  const [copied, setCopied] = React.useState(false);
+  const shareUrl = `https://sportsquad.vercel.app/post/${post.id}`;
+  const shareText = `${post.sport} · ${post.content.slice(0, 80)}${post.content.length > 80 ? "..." : ""}`;
+  const copyLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    } else {
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    }
+  };
+  const nativeShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: "SportSquad", text: shareText, url: shareUrl }).catch(() => {});
+    } else {
+      copyLink();
+    }
+  };
+  const shareOptions = [
+    { icon:"🔗", label:"Copy Link", action: copyLink, highlight: copied },
+    { icon:"📤", label: navigator && navigator.share ? "Share via..." : "Copy Text", action: nativeShare },
+    { icon:"💬", label:"WhatsApp", action: () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank") },
+    { icon:"🐦", label:"Twitter / X", action: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, "_blank") },
+  ];
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:1000, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+      <div style={{ background:"#1a1f2e", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"18px 18px 28px", border:"1px solid rgba(255,255,255,0.08)" }} onClick={e=>e.stopPropagation()}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", fontSize:16, margin:0 }}>↗ Share Post</h3>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.08)", border:"none", color:"#aaa", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:13 }}>✕</button>
+        </div>
+        {/* Post preview */}
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"11px 13px", marginBottom:18, border:"1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ color:"#888", fontSize:11, marginBottom:4 }}>{post.sport}</div>
+          <div style={{ color:"#ccc", fontSize:13, lineHeight:1.4 }}>{post.content.slice(0, 100)}{post.content.length > 100 ? "..." : ""}</div>
+          <div style={{ color:"#444", fontSize:11, marginTop:6, fontFamily:"monospace" }}>{shareUrl}</div>
+        </div>
+        {/* Share options */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {shareOptions.map(opt => (
+            <button key={opt.label} onClick={opt.action} style={{ background: opt.highlight ? "rgba(0,210,255,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${opt.highlight ? "#00d2ff" : "rgba(255,255,255,0.09)"}`, borderRadius:14, padding:"13px 10px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:6, transition:"all 0.2s" }}>
+              <span style={{ fontSize:22 }}>{opt.icon}</span>
+              <span style={{ color: opt.highlight ? "#00d2ff" : "#ccc", fontSize:12, fontWeight:600 }}>{opt.highlight && opt.label === "Copy Link" ? "✓ Copied!" : opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
@@ -128,7 +281,15 @@ export default function SportSquad() {
   const [profileEdit, setProfileEdit] = useState({});
   const [signupData, setSignupData] = useState({ name:"", email:"", password:"", sports:[] });
   const [loginEmail, setLoginEmail] = useState("");
+  
   const [loginPass, setLoginPass] = useState("");
+  const [commentPost, setCommentPost] = useState(null);
+  const [sharePost, setSharePost] = useState(null);
+  const [allComments, setAllComments] = useState(INITIAL_COMMENTS);
+  const addComment = (postId, comment) => {
+    setAllComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), comment] }));
+    setFeedPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments + 1 } : p));
+  };
 
   const handleSignup = () => {
     if (!signupData.name || !signupData.email) return;
@@ -205,6 +366,8 @@ export default function SportSquad() {
     <div style={{ minHeight:"100vh", background:"#0d1117", fontFamily:"'DM Sans',sans-serif", maxWidth:480, margin:"0 auto", position:"relative" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap'); *{box-sizing:border-box} input,textarea{outline:none} input::placeholder,textarea::placeholder{color:#555} ::-webkit-scrollbar{width:0}`}</style>
       {queuePost && <QueueModal post={queuePost} onClose={()=>setQueuePost(null)} />}
+      {commentPost && <CommentsModal post={commentPost} onClose={()=>setCommentPost(null)} myProfile={myProfile} allComments={allComments} onAddComment={addComment} />}
+      {sharePost && <ShareModal post={sharePost} onClose={()=>setSharePost(null)} />}
 
       {/* Header */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:"rgba(13,17,23,0.94)", backdropFilter:"blur(12px)", borderBottom:"1px solid rgba(255,255,255,0.05)", padding:"11px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -301,8 +464,8 @@ export default function SportSquad() {
                     <button onClick={()=>toggleLike(post.id)} style={{ background:"none", border:"none", color:feedLikes[post.id]?"#e63946":"#555", fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
                       {feedLikes[post.id]?"❤️":"🤍"} {post.likes+(feedLikes[post.id]?1:0)}
                     </button>
-                    <button style={{ background:"none", border:"none", color:"#555", fontSize:12, cursor:"pointer" }}>💬 {post.comments}</button>
-                    <button style={{ background:"none", border:"none", color:"#555", fontSize:12, cursor:"pointer" }}>↗ Share</button>
+                    <button onClick={()=>setCommentPost(post)} style={{ background:"none", border:"none", color:commentPost && commentPost.id===post.id?"#7c3aed":"#555", fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>💬 {(allComments[post.id]||[]).length > 0 ? (allComments[post.id]||[]).length : post.comments}</button>
+                    <button onClick={()=>setSharePost(post)} style={{ background:"none", border:"none", color:"#555", fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>↗ Share</button>
                   </div>
                 </div>
               );
