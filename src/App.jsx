@@ -1,686 +1,1073 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
+// âââ GLOBAL STYLES âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const STYLES = `
+:root{--bg:#0d0f1a;--card:#151829;--card2:#1c1f35;--border:#252842;--purple:#7c3aed;--cyan:#06b6d4;--purple2:#9333ea;--text:#e2e8f0;--muted:#64748b;--muted2:#94a3b8;--red:#dc2626;--green:#16a34a;--radius:14px;--grad:linear-gradient(135deg,#7c3aed,#06b6d4);--grad2:linear-gradient(135deg,#9333ea,#3b82f6)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+input,textarea,select{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 14px;font-size:14px;width:100%;outline:none;font-family:inherit}
+input:focus,textarea:focus,select:focus{border-color:var(--purple)}
+button{cursor:pointer;border:none;font-family:inherit;font-size:14px;border-radius:10px;padding:10px 18px;transition:opacity .15s,transform .1s}
+button:hover{opacity:.88}button:active{transform:scale(.97)}
+.btn-grad{background:var(--grad);color:#fff;font-weight:700}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted2)}
+.btn-red{background:var(--red);color:#fff;font-weight:600}
+#app{width:100%;max-width:620px;min-height:100vh;display:flex;flex-direction:column;position:relative}
+.top-nav{position:sticky;top:0;z-index:50;background:rgba(13,15,26,.92);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;cursor:pointer}
+.logo-text{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.logo-text .w{color:#fff}.logo-text .g{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-right{display:flex;align-items:center;gap:10px}
+.btn-post{background:var(--grad);color:#fff;font-weight:700;font-size:13px;padding:7px 14px;border-radius:20px;border:none;cursor:pointer}
+.avatar-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;border:none;cursor:pointer}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:620px;background:rgba(13,15,26,.95);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:50}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 14px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;transition:color .2s}
+.nav-tab svg{width:22px;height:22px}
+.nav-tab.active{color:var(--cyan)}
+.nav-tab.active svg{filter:drop-shadow(0 0 6px var(--cyan))}
+.page-wrap{flex:1;padding:12px 0 80px}
+.stories{display:flex;gap:12px;padding:8px 16px 12px;overflow-x:auto;scrollbar-width:none}
+.stories::-webkit-scrollbar{display:none}
+.story{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex-shrink:0}
+.story-ring{width:58px;height:58px;border-radius:50%;padding:2px;background:var(--grad)}
+.story-inner{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;border:2px solid var(--bg)}
+.story span{font-size:10px;color:var(--muted2);max-width:58px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.post-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin:6px 12px;padding:14px}
+.post-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.post-user{display:flex;align-items:center;gap:10px}
+.post-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+.post-name{font-weight:700;font-size:14px}
+.post-time{font-size:11px;color:var(--muted)}
+.sport-tag{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--muted2);white-space:nowrap}
+.post-text{font-size:14px;line-height:1.5;margin-bottom:10px}
+.post-media{border-radius:10px;overflow:hidden;margin-bottom:10px;max-height:340px;background:#000;display:flex;align-items:center;justify-content:center}
+.post-media img{width:100%;object-fit:cover;max-height:340px}
+.post-media video{width:100%;max-height:340px}
+.live-badge{background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.queue-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.queue-info{font-size:12px;color:var(--muted2)}
+.queue-info strong{color:var(--text);display:block;margin-bottom:2px}
+.btn-queue{background:var(--grad);color:#fff;font-weight:700;font-size:12px;padding:7px 14px;border-radius:20px;border:none;cursor:pointer}
+.post-actions{display:flex;align-items:center;gap:16px;padding-top:8px;border-top:1px solid var(--border)}
+.action-btn{display:flex;align-items:center;gap:5px;color:var(--muted2);font-size:13px;background:none;border:none;padding:4px 0;cursor:pointer;transition:color .2s}
+.action-btn:hover{color:var(--cyan)}
+.action-btn.liked{color:#ef4444}
+.action-btn svg{width:17px;height:17px}
+.section-header{padding:16px 16px 8px}
+.section-header h2{font-size:20px;font-weight:800}
+.section-header p{font-size:13px;color:var(--muted2);margin-top:2px}
+.squad-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin:6px 12px;padding:16px}
+.squad-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.squad-name{font-size:16px;font-weight:700}
+.squad-sport{font-size:12px;color:var(--muted2);margin-top:2px}
+.squad-desc{font-size:13px;color:var(--muted2);margin-bottom:12px}
+.squad-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.squad-meta-item{background:var(--card2);border-radius:8px;padding:10px 12px}
+.squad-meta-item label{font-size:10px;color:var(--muted);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.squad-meta-item span{font-size:13px;font-weight:600}
+.btn-squad-action{width:100%;padding:10px;background:var(--card2);border:1px dashed var(--border);border-radius:10px;color:var(--muted2);font-size:14px;margin-top:6px;cursor:pointer}
+.btn-join{background:var(--grad2);color:#fff;font-weight:700;padding:7px 16px;border-radius:20px;font-size:13px;border:none;cursor:pointer}
+.search-bar{margin:12px 16px 16px;position:relative}
+.search-bar input{padding-left:38px}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
+.sport-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 16px}
+.chip{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .2s;color:var(--text)}
+.chip:hover,.chip.active{background:var(--purple);border-color:var(--purple);color:#fff}
+.discover-section{padding:0 16px}
+.discover-section h3{font-size:14px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.player-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.player-info{display:flex;align-items:center;gap:10px}
+.player-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0}
+.player-name{font-weight:700;font-size:14px}
+.player-meta{font-size:12px;color:var(--muted2)}
+.player-sports{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
+.sport-mini{background:var(--card2);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--muted2)}
+.btn-follow{background:var(--grad);color:#fff;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;border:none;cursor:pointer;white-space:nowrap}
+.btn-following{background:var(--card2);color:var(--muted2);font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;border:1px solid var(--border);cursor:pointer;white-space:nowrap}
+.profile-banner{height:110px;background:linear-gradient(135deg,#1a1040,#0f2744,#0d1f3c)}
+.profile-info{padding:0 16px 16px}
+.profile-avatar-wrap{margin-top:-30px;margin-bottom:10px;position:relative;display:inline-block}
+.profile-avatar{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px;color:#fff;border:3px solid var(--bg)}
+.profile-avatar-add{position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--cyan);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);font-size:14px;cursor:pointer}
+.profile-name{font-size:20px;font-weight:800}
+.profile-handle{font-size:13px;color:var(--muted2);margin-top:2px}
+.profile-bio{font-size:13px;color:var(--muted2);margin:8px 0}
+.profile-stats{display:flex;gap:24px;margin:12px 0}
+.stat-item{text-align:center}
+.stat-item strong{display:block;font-size:18px;font-weight:800}
+.stat-item span{font-size:11px;color:var(--muted2)}
+.my-sports{margin:12px 0}
+.my-sports h4{font-size:13px;color:var(--muted2);margin-bottom:8px;font-weight:600}
+.sports-chips{display:flex;flex-wrap:wrap;gap:6px}
+.health-section{margin:0 0 16px}
+.health-header{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+.health-header h3{font-size:16px;font-weight:700}
+.device-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2)}
+.device-dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.device-dot.connected{background:#22c55e;box-shadow:0 0 6px #22c55e}
+.health-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px}
+.health-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.health-card-icon{font-size:22px;margin-bottom:6px}
+.health-card-value{font-size:26px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.health-card-unit{font-size:12px;color:var(--muted2);margin-top:2px}
+.health-card-label{font-size:12px;color:var(--muted);margin-top:4px}
+.connect-bar{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin:8px 16px;padding:14px;display:flex;align-items:center;justify-content:space-between}
+.connect-bar-info h4{font-size:14px;font-weight:600}
+.connect-bar-info p{font-size:12px;color:var(--muted2);margin-top:2px}
+.btn-connect{background:var(--grad);color:#fff;font-weight:700;font-size:12px;padding:7px 14px;border-radius:20px;border:none;cursor:pointer}
+.weekly-chart{padding:0 16px;margin-top:14px}
+.weekly-chart h4{font-size:14px;font-weight:700;margin-bottom:10px}
+.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.log-activity{margin:14px 16px 0}
+.log-activity h4{font-size:14px;font-weight:700;margin-bottom:10px}
+.log-form{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:10px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.activity-records{margin:14px 16px 0}
+.activity-records h4{font-size:14px;font-weight:700;margin-bottom:10px}
+.record-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.record-date{font-size:12px;color:var(--muted2)}
+.record-steps{font-size:16px;font-weight:700;color:var(--cyan)}
+.record-cals{font-size:12px;color:var(--muted2)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal{width:100%;max-width:620px;background:var(--card);border-radius:var(--radius) var(--radius) 0 0;padding:20px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:14px}
+.modal-tabs{display:flex;background:var(--card2);border-radius:10px;padding:4px;gap:4px;margin-bottom:14px}
+.modal-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted2);background:none;border:none;transition:all .2s}
+.modal-tab.active{background:var(--purple);color:#fff}
+.media-row{display:flex;gap:8px;margin-bottom:10px}
+.media-btn{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--muted2);transition:all .2s}
+.media-btn:hover,.media-btn.active{border-color:var(--purple);color:var(--purple)}
+.media-btn.live-active{border-color:#ef4444;color:#ef4444}
+.media-btn svg{width:22px;height:22px}
+.media-preview-wrap{border-radius:10px;overflow:hidden;background:#000;margin-bottom:10px;position:relative}
+.media-preview-wrap img,.media-preview-wrap video{width:100%;max-height:250px;object-fit:cover}
+.remove-media-btn{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px}
+.live-preview-wrap{background:#000;border-radius:10px;overflow:hidden;margin-bottom:10px}
+.live-preview-wrap video{width:100%;max-height:220px;object-fit:cover}
+.live-preview-header{padding:8px 10px;display:flex;align-items:center;gap:8px}
+.device-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.device-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .2s}
+.device-item:hover{border-color:var(--purple)}
+.device-name{font-weight:600;font-size:14px}
+.device-type{font-size:12px;color:var(--muted2);margin-top:2px}
+.connecting-spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.divider{height:1px;background:var(--border);margin:12px 0}
+.empty-state{text-align:center;padding:32px 20px;color:var(--muted2)}
+.empty-state .icon{font-size:36px;margin-bottom:8px}
+.empty-state p{font-size:14px}
+#login-page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:var(--bg);width:100%;max-width:620px}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo h1{font-size:32px;font-weight:900}
+.login-logo p{color:var(--muted2);font-size:14px;margin-top:4px}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:380px}
+.login-tabs{display:flex;background:var(--card2);border-radius:10px;padding:4px;gap:4px;margin-bottom:20px}
+.login-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;color:var(--muted2);background:none;border:none;transition:all .2s}
+.login-tab.active{background:var(--purple);color:#fff}
+.login-form{display:flex;flex-direction:column;gap:12px}
+.demo-note{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
+`;
+
+// âââ CONSTANTS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const SPORTS = [
-  "⚽ Football","🏀 Basketball","🎾 Tennis","🏊 Swimming","🏋️ Gym","🏏 Cricket",
-  "🏐 Volleyball","🏃 Running","🚴 Cycling","🥊 Boxing","🏑 Hockey","⛳ Golf",
-  "🏄 Surfing","🎱 Billiards","🏸 Badminton","🤸 Gymnastics","🏇 Horse Riding",
-  "🎿 Skiing","🏂 Snowboarding","🛹 Skateboarding","🏊 Water Polo","🚣 Rowing",
-  "🏹 Archery","🤼 Wrestling","🤺 Fencing","🏋️ Weightlifting","🤾 Handball",
-  "🏌️ Disc Golf","🧗 Rock Climbing","🏓 Table Tennis","🥋 Martial Arts",
-  "🤿 Scuba Diving","🏒 Ice Hockey","⛸️ Ice Skating","🎯 Darts","🎳 Bowling",
-  "🏊 Triathlon","🚵 Mountain Biking","🏄 Wakeboarding","🛶 Kayaking",
-  "🧘 Yoga","🤸 Cheerleading","🎽 Athletics","🏆 Esports","🎮 Gaming Sports",
-  "🐎 Polo","🎣 Fishing","🏹 Shooting Sports","🚴 BMX","🤼 Sumo",
-  "🥌 Curling","🏒 Lacrosse","🏈 American Football","🏉 Rugby","⚾ Baseball",
-  "🥎 Softball","🏐 Beach Volleyball","🚤 Sailing","🪂 Skydiving","🏋️ Powerlifting",
-  "🎾 Padel","🏓 Pickleball","🎾 Squash","🎾 Racquetball","🏸 Speed Badminton",
-  "🎾 Real Tennis","🏓 Beach Tennis","🎾 Platform Tennis","🏸 Shuttlecock",
-  "🎾 Pop Tennis","🎾 Basque Pelota",
+  'â½ Football','ð Basketball','ð¾ Tennis','ð Swimming','âï¸ Gym',
+  'ð Cricket','ð Volleyball','ð Running','ð´ Cycling','ð¥ Boxing',
+  'ð Hockey','â³ Golf','ð Surfing','ð¸ Badminton','ð§ Yoga',
+  'ð¥ Martial Arts','ð® Esports','ð Rugby','â¾ Baseball','ðï¸ Powerlifting',
+  'ð¿ Skiing','ð Ice Hockey','ð³ Bowling','ð£ Rowing','ð¹ Archery',
+  'â·ï¸ Snowboarding','ð¹ Skateboarding','ð¤¸ Gymnastics','ð Water Polo','ð± Billiards',
 ];
 
-const SAMPLE_USERS = [
-  { id: 1, name: "Marco Reyes", handle: "@marcoreyes", avatar: "MR", sports: ["⚽ Football","🏀 Basketball"], bio: "Weekend warrior. Ballers only 🏀", followers: 248, following: 189, cover: "#1a472a" },
-  { id: 2, name: "Aisha Tan", handle: "@aishatan", avatar: "AT", sports: ["🏊 Swimming","🏃 Running"], bio: "Swim at dawn, run at dusk 🌊", followers: 512, following: 301, cover: "#0c3547" },
-  { id: 3, name: "Dev Patel", handle: "@devpatel", avatar: "DP", sports: ["🏋️ Gym","🥊 Boxing"], bio: "Iron doesn't lie 💪", followers: 189, following: 220, cover: "#3d1a1a" },
-  { id: 4, name: "Lena Cruz", handle: "@lenacruz", avatar: "LC", sports: ["🎾 Tennis","🏸 Badminton"], bio: "Racket sports enthusiast 🎾", followers: 342, following: 155, cover: "#1a3a47" },
-  { id: 5, name: "Carlos Wu", handle: "@carloswu", avatar: "CW", sports: ["⚽ Football","🏑 Hockey"], bio: "Team player always 🏑", followers: 421, following: 390, cover: "#2a1a47" },
+const AVATAR_COLORS = [
+  'linear-gradient(135deg,#0d9488,#0891b2)',
+  'linear-gradient(135deg,#7c3aed,#9333ea)',
+  'linear-gradient(135deg,#ea580c,#dc2626)',
+  'linear-gradient(135deg,#16a34a,#0d9488)',
+  'linear-gradient(135deg,#0284c7,#7c3aed)',
+  'linear-gradient(135deg,#d97706,#ea580c)',
 ];
 
-const SAMPLE_SQUADS = [
-  { id: 1, name: "Sunday Ballers", sport: "⚽ Football", members: 12, admin: "Marco Reyes", desc: "Weekly football sessions every Sunday 7am", nextGame: "Sun Apr 6, 7:00 AM", venue: "Rizal Park Field A" },
-  { id: 2, name: "Morning Swim Crew", sport: "🏊 Swimming", members: 8, admin: "Aisha Tan", desc: "Early risers swim club, all levels welcome", nextGame: "Tue Apr 1, 5:30 AM", venue: "Olympic Pool BGC" },
-  { id: 3, name: "Iron Wolves", sport: "🏋️ Gym", members: 15, admin: "Dev Patel", desc: "Strength training + boxing combo sessions", nextGame: "Mon Mar 31, 6:00 PM", venue: "Hardcore Gym Makati" },
+const INITIAL_POSTS = [
+  { id: 1, userId: 'marcoreyes', name: 'Marco Reyes', initials: 'MR', avatarColor: AVATAR_COLORS[0], sport: 'â½ Football', text: 'Just finished a 5v5 at the park. What a game! Final score 4â3. Need more players for next Sunday ð¥', time: '2h ago', likes: 34, comments: 3, liked: false, mediaType: null, mediaUrl: null, isLive: false, isQueue: false },
+  { id: 2, userId: 'aishatan', name: 'Aisha Tan', initials: 'AT', avatarColor: AVATAR_COLORS[3], sport: 'ð Swimming', text: 'Opening slots for Morning Swim this Saturday! Only 3 spots left. â±150/head. Tap to join queue ð', time: '4h ago', likes: 18, comments: 2, liked: false, mediaType: null, mediaUrl: null, isLive: false, isQueue: true, queuePrice: 150, queueSlots: 3, queueVenue: 'Olympic Pool BGC' },
+  { id: 3, userId: 'devpatel', name: 'Dev Patel', initials: 'DP', avatarColor: AVATAR_COLORS[4], sport: 'âï¸ Gym', text: 'PR day! Hit 120kg on bench for the first time. Training consistency pays off ðª #GymLife', time: '5h ago', likes: 87, comments: 3, liked: false, mediaType: null, mediaUrl: null, isLive: false, isQueue: false },
+  { id: 4, userId: 'lenacruz', name: 'Lena Cruz', initials: 'LC', avatarColor: AVATAR_COLORS[5], sport: 'ð¾ Tennis', text: 'Tennis doubles session this weekend. Mixed skill levels okay! â±300 court fee split 4 ways = â±75 each. Join?', time: '1d ago', likes: 12, comments: 2, liked: false, mediaType: null, mediaUrl: null, isLive: false, isQueue: true, queuePrice: 75, queueSlots: 2, queueVenue: 'BGC Tennis Courts' },
 ];
 
-const INITIAL_FEED = [
-  { id: 1, userId: 1, type: "post", content: "Just finished a 5v5 at the park. What a game! Final score 4-3. Need more players for next Sunday 🔥", sport: "⚽ Football", likes: 34, comments: 12, time: "2h ago" },
-  { id: 2, userId: 2, type: "queue", content: "Opening slots for Morning Swim this Saturday! Only 3 spots left. ₱150/head. Tap to join queue 👇", sport: "🏊 Swimming", likes: 18, comments: 5, time: "4h ago", slots: 3, cost: 150 },
-  { id: 3, userId: 3, type: "post", content: "PR day! Hit 120kg on bench for the first time. Training consistency pays off 💪 #GymLife", sport: "🏋️ Gym", likes: 87, comments: 23, time: "6h ago" },
-  { id: 4, userId: 4, type: "queue", content: "Tennis doubles session this weekend. Mixed skill levels okay! ₱300 court fee split 4 ways = ₱75 each. Join?", sport: "🎾 Tennis", likes: 12, comments: 8, time: "1d ago", slots: 2, cost: 75 },
-  { id: 5, userId: 5, type: "post", content: "Looking for a goalkeeper for our Sunday squad! Must be available 7AM. Comment below 👇", sport: "⚽ Football", likes: 29, comments: 45, time: "1d ago" },
+const SQUADS_DATA = [
+  { name: 'Sunday Ballers', sport: 'â½ Football', members: 12, desc: 'Weekly football sessions every Sunday 7am', nextGame: 'Sun Apr 6, 7:00 AM', venue: 'Rizal Park Field A' },
+  { name: 'Morning Swim Crew', sport: 'ð Swimming', members: 8, desc: 'Early risers swim club, all levels welcome', nextGame: 'Tue Apr 1, 5:30 AM', venue: 'Olympic Pool BGC' },
+  { name: 'Iron Wolves', sport: 'âï¸ Gym', members: 15, desc: 'Strength training + boxing combo sessions', nextGame: 'Mon Mar 31, 6:00 PM', venue: 'Hardcore Gym Makati' },
 ];
 
-const colors = ["#e63946","#2a9d8f","#e9c46a","#f4a261","#457b9d","#8338ec","#06d6a0"];
-const Avatar = ({ user, size = 40 }) => {
-  const color = colors[user.id % colors.length];
-  if (user.photo) {
+const PLAYERS_DATA = [
+  { name: 'Marco Reyes', handle: '@marcoreyes', followers: 248, sports: ['â½ Football', 'ð Basketball'], initials: 'MR', color: AVATAR_COLORS[0] },
+  { name: 'Aisha Tan', handle: '@aishatan', followers: 314, sports: ['ð Swimming', 'ð§ Yoga'], initials: 'AT', color: AVATAR_COLORS[3] },
+  { name: 'Dev Patel', handle: '@devpatel', followers: 502, sports: ['âï¸ Gym', 'ð¥ Boxing'], initials: 'DP', color: AVATAR_COLORS[4] },
+  { name: 'Lena Cruz', handle: '@lenacruz', followers: 189, sports: ['ð¾ Tennis', 'ð Running'], initials: 'LC', color: AVATAR_COLORS[5] },
+  { name: 'Carlos Wu', handle: '@carloswu', followers: 97, sports: ['ð Basketball', 'ð® Esports'], initials: 'CW', color: AVATAR_COLORS[1] },
+];
+
+const DEVICES_DATA = [
+  { name: 'Fitbit Charge 6', type: 'Fitness Tracker', icon: 'â' },
+  { name: 'Apple Watch', type: 'Smartwatch', icon: 'ð' },
+  { name: 'Garmin Venu', type: 'GPS Smartwatch', icon: 'ð¢' },
+  { name: 'Samsung Galaxy Watch', type: 'Smartwatch', icon: 'ðµ' },
+  { name: 'Xiaomi Mi Band 8', type: 'Fitness Band', icon: 'ð¿' },
+];
+
+// âââ HELPERS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function getLS(key, def) {
+  try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
+}
+function setLS(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function formatDate(d) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+// âââ LOGO SVG âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function LogoSVG({ size = 28 }) {
+  return (
+    <svg viewBox="0 0 40 40" fill="none" width={size} height={size}>
+      <circle cx="20" cy="20" r="18" stroke="url(#lg)" strokeWidth="2.5"/>
+      <path d="M2 20 Q10 12 20 20 Q30 28 38 20" stroke="url(#lg)" strokeWidth="2" fill="none"/>
+      <path d="M20 2 Q28 10 20 20 Q12 30 20 38" stroke="url(#lg)" strokeWidth="2" fill="none"/>
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="40" y2="40">
+          <stop offset="0%" stopColor="#7c3aed"/>
+          <stop offset="100%" stopColor="#06b6d4"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+// âââ ICONS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const Icon = {
+  Feed: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+  Squads: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  Discover: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+  Profile: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  Heart: ({ filled }) => <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  Comment: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  Share: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+  Photo: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
+  Video: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
+  Live: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M5.636 5.636a9 9 0 1 0 12.728 12.728"/><path d="M16.243 7.757a6 6 0 0 1 0 8.486"/><path d="M7.757 16.243a6 6 0 0 1 0-8.486"/></svg>,
+};
+
+// âââ POST CARD ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function PostCard({ post, onLike, onJoinQueue, onShare }) {
+  return (
+    <div className="post-card">
+      <div className="post-header">
+        <div className="post-user">
+          <div className="post-avatar" style={{ background: post.avatarColor }}>{post.initials}</div>
+          <div>
+            <div className="post-name">{post.name}</div>
+            <div className="post-time">@{post.userId} Â· {post.time}</div>
+          </div>
+        </div>
+        <span className="sport-tag">{post.sport}</span>
+      </div>
+
+      {post.isLive && <div className="live-badge" style={{ marginBottom: 8 }}><span className="live-dot"/>WAS LIVE</div>}
+      <div className="post-text">{post.text}</div>
+
+      {post.isLive && (
+        <div style={{ background: '#111', borderRadius: 10, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)', fontSize: 13, marginBottom: 10 }}>
+          ð¡ Live stream ended
+        </div>
+      )}
+      {post.mediaType === 'image' && (
+        <div className="post-media"><img src={post.mediaUrl} alt="post"/></div>
+      )}
+      {post.mediaType === 'video' && (
+        <div className="post-media"><video src={post.mediaUrl} controls/></div>
+      )}
+
+      {post.isQueue && (
+        <div className="queue-card">
+          <div className="queue-info">
+            <strong>ðï¸ Queue Event</strong>
+            â±{post.queuePrice}/person Â· {post.queueSlots} slots left
+          </div>
+          <button className="btn-queue" onClick={() => onJoinQueue(post.id)}>Join Queue</button>
+        </div>
+      )}
+
+      <div className="post-actions">
+        <button className={`action-btn${post.liked ? ' liked' : ''}`} onClick={() => onLike(post.id)}>
+          <Icon.Heart filled={post.liked}/> {post.likes}
+        </button>
+        <button className="action-btn"><Icon.Comment/> {post.comments}</button>
+        <button className="action-btn" onClick={() => onShare(post.id)}><Icon.Share/> Share</button>
+      </div>
+    </div>
+  );
+}
+
+// âââ MAIN APP âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+export default function App() {
+  // ââ Auth ââ
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authTab, setAuthTab] = useState('login');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [signupName, setSignupName] = useState('');
+  const [signupHandle, setSignupHandle] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+
+  // ââ Navigation ââ
+  const [page, setPage] = useState('feed');
+
+  // ââ Posts ââ
+  const [posts, setPosts] = useState(() => getLS('ss_posts', INITIAL_POSTS));
+
+  // ââ Post modal ââ
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [postTab, setPostTab] = useState('post');
+  const [postText, setPostText] = useState('');
+  const [postSport, setPostSport] = useState('');
+  const [queueText, setQueueText] = useState('');
+  const [queuePrice, setQueuePrice] = useState('');
+  const [queueSlots, setQueueSlots] = useState('');
+  const [queueVenue, setQueueVenue] = useState('');
+  const [queueSport, setQueueSport] = useState('');
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState(null);
+  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaType, setMediaType] = useState(null); // 'image' | 'video'
+  const [isLive, setIsLive] = useState(false);
+  const [liveStream, setLiveStream] = useState(null);
+  const [liveConnecting, setLiveConnecting] = useState(false);
+
+  // ââ Players follow state ââ
+  const [following, setFollowing] = useState({});
+
+  // ââ Discover search ââ
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSport, setActiveSport] = useState('');
+
+  // ââ Health ââ
+  const [activityRecords, setActivityRecords] = useState(() => getLS('ss_activity', []));
+  const [deviceConnected, setDeviceConnected] = useState(false);
+  const [connectedDevice, setConnectedDevice] = useState('');
+  const [showDeviceModal, setShowDeviceModal] = useState(false);
+  const [connectingIdx, setConnectingIdx] = useState(null);
+  const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
+  const [logSteps, setLogSteps] = useState('');
+  const [logCalories, setLogCalories] = useState('');
+  const [logActive, setLogActive] = useState('');
+  const [logNote, setLogNote] = useState('');
+
+  // ââ Toast ââ
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimer = useRef(null);
+
+  // ââ Refs ââ
+  const liveVideoRef = useRef(null);
+  const chartRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // ââ Inject CSS ââ
+  useEffect(() => {
+    const el = document.createElement('style');
+    el.textContent = STYLES;
+    document.head.appendChild(el);
+    return () => document.head.removeChild(el);
+  }, []);
+
+  // ââ Load user from storage ââ
+  useEffect(() => {
+    const saved = getLS('ss_user', null);
+    if (saved) { setCurrentUser(saved); setIsLoggedIn(true); }
+  }, []);
+
+  // ââ Persist posts ââ
+  useEffect(() => { setLS('ss_posts', posts); }, [posts]);
+  useEffect(() => { setLS('ss_activity', activityRecords); }, [activityRecords]);
+
+  // ââ Draw chart when profile page is active ââ
+  useEffect(() => {
+    if (page === 'profile' && chartRef.current) {
+      drawChart();
+    }
+  }, [page, activityRecords]);
+
+  // ââ Live video preview ââ
+  useEffect(() => {
+    if (liveVideoRef.current && liveStream) {
+      liveVideoRef.current.srcObject = liveStream;
+    }
+  }, [liveStream]);
+
+  // ââ Toast helper ââ
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    setToastVisible(true);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastVisible(false), 2500);
+  }, []);
+
+  // âââ AUTH âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  function doLogin() {
+    if (!loginEmail || !loginPassword) { showToast('Enter email and password'); return; }
+    const saved = getLS('ss_user', null);
+    const user = saved || {
+      name: 'Marco Reyes', handle: '@marcoreyes', initials: 'MR',
+      email: loginEmail, bio: 'Weekend warrior. Ballers only ð',
+      sports: ['â½ Football', 'ð Basketball'], followers: 248, following: 189, squads: 0
+    };
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+  }
+
+  function doSignup() {
+    if (!signupName || !signupHandle || !signupEmail) { showToast('Fill all fields'); return; }
+    const user = {
+      name: signupName,
+      handle: signupHandle.startsWith('@') ? signupHandle : '@' + signupHandle,
+      initials: getInitials(signupName),
+      email: signupEmail,
+      bio: 'ð New to SportSquad!',
+      sports: [], followers: 0, following: 0, squads: 0
+    };
+    setLS('ss_user', user);
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+  }
+
+  function doLogout() {
+    stopLive();
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setPage('feed');
+  }
+
+  // âââ POSTS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  function toggleLike(id) {
+    setPosts(prev => prev.map(p =>
+      p.id === id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p
+    ));
+  }
+
+  function joinQueue(id) {
+    setPosts(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      if (p.queueSlots <= 0) { showToast('No slots left!'); return p; }
+      showToast('â Joined the queue!');
+      return { ...p, queueSlots: p.queueSlots - 1 };
+    }));
+  }
+
+  function sharePost() {
+    if (navigator.share) navigator.share({ title: 'SportSquad', url: window.location.href });
+    else showToast('ð Link copied!');
+  }
+
+  // âââ POST MODAL âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  function openPostModal() { setShowPostModal(true); }
+
+  function closePostModal() {
+    setShowPostModal(false);
+    stopLive();
+    setPostText(''); setPostSport(''); setPostTab('post');
+    setQueueText(''); setQueuePrice(''); setQueueSlots(''); setQueueVenue(''); setQueueSport('');
+    setMediaPreviewUrl(null); setMediaFile(null); setMediaType(null);
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    stopLive();
+    const url = URL.createObjectURL(file);
+    setMediaFile(file);
+    setMediaPreviewUrl(url);
+    setMediaType(file.type.startsWith('image/') ? 'image' : 'video');
+  }
+
+  function removeMedia() {
+    setMediaPreviewUrl(null); setMediaFile(null); setMediaType(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function toggleLive() {
+    if (isLive) { stopLive(); return; }
+    setLiveConnecting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setLiveStream(stream);
+      setIsLive(true);
+      removeMedia();
+    } catch {
+      showToast('Camera access denied');
+    } finally {
+      setLiveConnecting(false);
+    }
+  }
+
+  function stopLive() {
+    if (liveStream) { liveStream.getTracks().forEach(t => t.stop()); }
+    setLiveStream(null);
+    setIsLive(false);
+  }
+
+  function submitPost() {
+    const text = postTab === 'post' ? postText : queueText;
+    const sport = postTab === 'post' ? postSport : queueSport;
+    if (!text.trim()) { showToast('Write something first!'); return; }
+    if (!sport) { showToast('Select a sport!'); return; }
+
+    const newPost = {
+      id: Date.now(),
+      userId: (currentUser?.handle || '').replace('@', '') || 'user',
+      name: currentUser?.name || 'You',
+      initials: currentUser?.initials || 'ME',
+      avatarColor: AVATAR_COLORS[0],
+      sport, text: text.trim(),
+      time: 'Just now', likes: 0, comments: 0, liked: false,
+      isLive,
+      isQueue: postTab === 'queue',
+      queuePrice: postTab === 'queue' ? parseInt(queuePrice) || 0 : 0,
+      queueSlots: postTab === 'queue' ? parseInt(queueSlots) || 0 : 0,
+      queueVenue: postTab === 'queue' ? queueVenue : '',
+      mediaType: null, mediaUrl: null,
+    };
+
+    if (mediaFile) {
+      const reader = new FileReader();
+      reader.onload = e2 => {
+        newPost.mediaType = mediaType;
+        newPost.mediaUrl = e2.target.result;
+        setPosts(prev => [newPost, ...prev]);
+        closePostModal();
+        setPage('feed');
+        showToast('â Posted!');
+      };
+      reader.readAsDataURL(mediaFile);
+    } else {
+      setPosts(prev => [newPost, ...prev]);
+      closePostModal();
+      setPage('feed');
+      showToast(bsLive ? 'ð¡ You went live!' : 'â Posted!');
+    }
+  }
+
+  // âââ HEALTH âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  function connectDevice(idx) {
+    setConnectingIdx(idx);
+    setTimeout(() => {
+      setDeviceConnected(true);
+      setConnectedDevice(DEVICES_DATA[idx].name);
+      setConnectingIdx(null);
+      setShowDeviceModal(false);
+      // Simulate sync
+      const today = new Date().toISOString().split('T')[0];
+      if (!activityRecords.find(r => r.date === today)) {
+        const steps = Math.floor(Math.random() * 5000) + 4000;
+        const newRec = { date: today, steps, calories: Math.floor(steps * 0.04), active: Math.floor(steps / 100), note: 'Synced from ' + DEVICES_DATA[idx].name };
+        setActivityRecords(prev => [newRec, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
+      }
+      showToast('â ' + DEVICES_DATA[idx].name + ' connected!');
+    }, 1800);
+  }
+
+  function logActivity() {
+    if (!logDate) { showToast('Pick a date'); return; }
+    const steps = parseInt(logSteps);
+    if (!steps) { showToast('Enter step count'); return; }
+    const newRec = { date: logDate, steps, calories: parseInt(logCalories) || 0, active: parseInt(logActive) || 0, note: logNote };
+    setActivityRecords(prev => {
+      const filtered = prev.filter(r => r.date !== logDate);
+      return [newRec, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
+    });
+    setLogSteps(''); setLogCalories(''); setLogActive(''); setLogNote('');
+    showToast('â Activity saved!');
+  }
+
+  function getToday() {
+    return activityRecords.find(r => r.date === new Date().toISOString().split('T')[0]);
+  }
+
+  function getWeeklyAvg() {
+    const week = activityRecords.slice(0, 7);
+    if (!week.length) return 0;
+    return Math.round(week.reduce((s, r) => s + r.steps, 0) / week.length);
+  }
+
+  function drawChart() {
+    const canvas = chartRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.parentElement.clientWidth - 28;
+    canvas.width = W; canvas.height = 120;
+
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      const rec = activityRecords.find(r => r.date === key);
+      days.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1), steps: rec ? rec.steps : 0 });
+    }
+
+    const max = Math.max(...days.map(d => d.steps), 10000);
+    const barW = (W - 40) / 7 - 6;
+    const chartH = 80; const offsetX = 20; const offsetY = 8;
+    ctx.clearRect(0, 0, W, 120);
+
+    days.forEach((d, i) => {
+      const x = offsetX + i * ((W - 40) / 7);
+      const barH = (d.steps / max) * chartH;
+      const y = offsetY + chartH - barH;
+
+      if (d.steps > 0) {
+        const g = ctx.createLinearGradient(x, y, x, offsetY + chartH);
+        g.addColorStop(0, '#7c3aed'); g.addColorStop(1, '#06b6d4');
+        ctx.fillStyle = g;
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,.07)';
+      }
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, barW, Math.max(barH, 2), 4);
+      else ctx.rect(x, y, barW, Math.max(barH, 2));
+      ctx.fill();
+
+      if (i === 0) {
+        const goalY = offsetY + chartH - (10000 / max) * chartH;
+        ctx.strokeStyle = 'rgba(234,88,12,.4)';
+        ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(offsetX, goalY); ctx.lineTo(W - 20, goalY); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(d.label, x + barW / 2, 108);
+      if (d.steps > 0) {
+        ctx.fillStyle = '#94a3b8'; ctx.font = '9px sans-serif';
+        ctx.fillText(d.steps >= 1000 ? (d.steps / 1000).toFixed(1) + 'k' : d.steps, x + barW / 2, y - 3);
+      }
+    });
+  }
+
+  // âââ LOGIN PAGE ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  if (!isLoggedIn) {
     return (
-      <div style={{ width:size, height:size, borderRadius:"50%", flexShrink:0, border:"2px solid rgba(255,255,255,0.18)", overflow:"hidden", background:"#222" }}>
-        <img src={user.photo} alt={user.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+      <div id="login-page">
+        <div className="login-logo">
+          <LogoSVG size={48}/>
+          <h1><span className="w">Sport</span><span className="g">Squad</span></h1>
+          <p>Connect Â· Play Â· Squad Up</p>
+        </div>
+        <div className="login-box">
+          <div className="login-tabs">
+            <button className={`login-tab${authTab === 'login' ? ' active' : ''}`} onClick={() => setAuthTab('login')}>Log In</button>
+            <button className={`login-tab${authTab === 'signup' ? ' active' : ''}`} onClick={() => setAuthTab('signup')}>Sign Up</button>
+          </div>
+          {authTab === 'login' ? (
+            <div className="login-form">
+              <input type="email" placeholder="Email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)}/>
+              <input type="password" placeholder="Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)}/>
+              <button className="btn-grad" style={{ width: '100%', padding: 12 }} onClick={doLogin}>Log In</button>
+              <p className="demo-note">Demo: any email/password works</p>
+            </div>
+          ) : (
+            <div className="login-form">
+              <input type="text" placeholder="Full Name" value={signupName} onChange={e => setSignupName(e.target.value)}/>
+              <input type="text" placeholder="Username (e.g. @johndoe)" value={signupHandle} onChange={e => setSignupHandle(e.target.value)}/>
+              <input type="email" placeholder="Email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)}/>
+              <button className="btn-grad" style={{ width: '100%', padding: 12 }} onClick={doSignup}>Create Account</button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
-  return (
-    <div style={{ width:size, height:size, borderRadius:"50%", background:`linear-gradient(135deg, ${color}, ${color}88)`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:size*0.32, color:"#fff", flexShrink:0, border:"2px solid rgba(255,255,255,0.12)" }}>
-      {user.avatar}
-    </div>
-  );
-};
 
-
-const INITIAL_COMMENTS = {
-  1: [
-    { id:1, userId:2, text:"Great game! Wish I was there 🔥", time:"1h ago" },
-    { id:2, userId:3, text:"What was the final formation?", time:"1h ago" },
-    { id:3, userId:4, text:"Count me in for next Sunday!", time:"30m ago" },
-  ],
-  2: [
-    { id:1, userId:1, text:"I'll take a slot! 🏊", time:"3h ago" },
-    { id:2, userId:5, text:"Is there parking nearby?", time:"2h ago" },
-  ],
-  3: [
-    { id:1, userId:2, text:"Beast mode activated 💪", time:"5h ago" },
-    { id:2, userId:4, text:"120kg! Absolute unit!", time:"4h ago" },
-    { id:3, userId:5, text:"What program are you running?", time:"2h ago" },
-  ],
-  4: [
-    { id:1, userId:1, text:"I'm in, mixed levels is perfect for me!", time:"22h ago" },
-    { id:2, userId:3, text:"Same court as last time?", time:"20h ago" },
-  ],
-  5: [
-    { id:1, userId:2, text:"I can play GK! What time exactly?", time:"20h ago" },
-    { id:2, userId:3, text:"Need subs too? I'm available", time:"18h ago" },
-    { id:3, userId:4, text:"Tagging @lenacruz she might know someone", time:"10h ago" },
-  ],
-};
-
-const CommentsModal = ({ post, onClose, myProfile, allComments, onAddComment }) => {
-  const postUser = SAMPLE_USERS.find(u => u.id === post.userId) || myProfile || SAMPLE_USERS[0];
-  const comments = allComments[post.id] || [];
-  const [text, setText] = React.useState("");
-  const submit = () => {
-    if (!text.trim()) return;
-    onAddComment(post.id, { id: Date.now(), userId: 99, text: text.trim(), time: "Just now" });
-    setText("");
-  };
-  const getUser = id => id === 99 ? myProfile : SAMPLE_USERS.find(u => u.id === id) || SAMPLE_USERS[0];
-  return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:1000, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div style={{ background:"#1a1f2e", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", maxHeight:"82vh", display:"flex", flexDirection:"column", border:"1px solid rgba(255,255,255,0.08)" }} onClick={e=>e.stopPropagation()}>
-        {/* Header */}
-        <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
-          <div>
-            <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", fontSize:16, margin:0 }}>💬 Comments</h3>
-            <div style={{ color:"#555", fontSize:11, marginTop:2 }}>{postUser.name} · {post.sport}</div>
-          </div>
-          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.08)", border:"none", color:"#aaa", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:13 }}>✕</button>
-        </div>
-        {/* Original post preview */}
-        <div style={{ padding:"10px 18px", borderBottom:"1px solid rgba(255,255,255,0.04)", background:"rgba(255,255,255,0.02)", flexShrink:0 }}>
-          <div style={{ color:"#888", fontSize:12, lineHeight:1.4 }}>{post.content}</div>
-        </div>
-        {/* Comments list */}
-        <div style={{ overflowY:"auto", flex:1, padding:"10px 18px" }}>
-          {comments.length === 0 && (
-            <div style={{ textAlign:"center", color:"#444", fontSize:13, padding:"24px 0" }}>No comments yet. Be the first! 👇</div>
-          )}
-          {comments.map((c, i) => {
-            const u = getUser(c.userId);
-            if (!u) return null;
-            const col = colors[u.id % colors.length];
-            return (
-              <div key={c.id} style={{ display:"flex", gap:9, marginBottom:14 }}>
-                <div style={{ width:32, height:32, borderRadius:"50%", background:`linear-gradient(135deg,${col},${col}88)`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:10, color:"#fff", flexShrink:0, border:"2px solid rgba(255,255,255,0.1)" }}>
-                  {u.avatar}
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:"flex", alignItems:"baseline", gap:7, marginBottom:3 }}>
-                    <span style={{ color:"#fff", fontWeight:700, fontSize:12 }}>{u.name}</span>
-                    <span style={{ color:"#444", fontSize:10 }}>{c.time}</span>
-                  </div>
-                  <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:"4px 14px 14px 14px", padding:"8px 11px", color:"#ccc", fontSize:13, lineHeight:1.4 }}>
-                    {c.text}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {/* Input area */}
-        <div style={{ padding:"10px 14px 16px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:9, alignItems:"center", flexShrink:0 }}>
-          {myProfile && <Avatar user={myProfile} size={32} />}
-          <input
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && submit()}
-            placeholder="Write a comment..."
-            style={{ flex:1, background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:22, padding:"9px 14px", color:"#fff", fontSize:13, outline:"none" }}
-          />
-          <button onClick={submit} style={{ background:text.trim()?"linear-gradient(135deg,#7c3aed,#00d2ff)":"rgba(255,255,255,0.07)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:text.trim()?"pointer":"default", flexShrink:0, transition:"background 0.2s" }}>
-            <span style={{ fontSize:15 }}>↑</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ShareModal = ({ post, onClose }) => {
-  const [copied, setCopied] = React.useState(false);
-  const shareUrl = `https://sportsquad.vercel.app/post/${post.id}`;
-  const shareText = `${post.sport} · ${post.content.slice(0, 80)}${post.content.length > 80 ? "..." : ""}`;
-  const copyLink = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-    } else {
-      setCopied(true); setTimeout(() => setCopied(false), 2000);
-    }
-  };
-  const nativeShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: "SportSquad", text: shareText, url: shareUrl }).catch(() => {});
-    } else {
-      copyLink();
-    }
-  };
-  const shareOptions = [
-    { icon:"🔗", label:"Copy Link", action: copyLink, highlight: copied },
-    { icon:"📤", label: navigator && navigator.share ? "Share via..." : "Copy Text", action: nativeShare },
-    { icon:"💬", label:"WhatsApp", action: () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank") },
-    { icon:"🐦", label:"Twitter / X", action: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, "_blank") },
+  const todayRec = getToday();
+  const storyUsers = [
+    { name: 'Marco', initials: 'MR', color: AVATAR_COLORS[0] },
+    { name: 'Aisha', initials: 'AT', color: AVATAR_COLORS[3] },
+    { name: 'Dev', initials: 'DP', color: AVATAR_COLORS[4] },
+    { name: 'Lena', initials: 'LC', color: AVATAR_COLORS[5] },
+    { name: 'Carlos', initials: 'CW', color: AVATAR_COLORS[1] },
   ];
+  const filteredPlayers = PLAYERS_DATA.filter(p =>
+    (!searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.handle.includes(searchQuery.toLowerCase())) &&
+    (!activeSport || p.sports.some(s => s.includes(activeSport.replace(/^\S+\s/, ''))))
+  );
+
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:1000, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div style={{ background:"#1a1f2e", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"18px 18px 28px", border:"1px solid rgba(255,255,255,0.08)" }} onClick={e=>e.stopPropagation()}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-          <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", fontSize:16, margin:0 }}>↗ Share Post</h3>
-          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.08)", border:"none", color:"#aaa", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:13 }}>✕</button>
-        </div>
-        {/* Post preview */}
-        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"11px 13px", marginBottom:18, border:"1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ color:"#888", fontSize:11, marginBottom:4 }}>{post.sport}</div>
-          <div style={{ color:"#ccc", fontSize:13, lineHeight:1.4 }}>{post.content.slice(0, 100)}{post.content.length > 100 ? "..." : ""}</div>
-          <div style={{ color:"#444", fontSize:11, marginTop:6, fontFamily:"monospace" }}>{shareUrl}</div>
-        </div>
-        {/* Share options */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-          {shareOptions.map(opt => (
-            <button key={opt.label} onClick={opt.action} style={{ background: opt.highlight ? "rgba(0,210,255,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${opt.highlight ? "#00d2ff" : "rgba(255,255,255,0.09)"}`, borderRadius:14, padding:"13px 10px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:6, transition:"all 0.2s" }}>
-              <span style={{ fontSize:22 }}>{opt.icon}</span>
-              <span style={{ color: opt.highlight ? "#00d2ff" : "#ccc", fontSize:12, fontWeight:600 }}>{opt.highlight && opt.label === "Copy Link" ? "✓ Copied!" : opt.label}</span>
+    <>
+      <div id="app">
+        {/* TOP NAV */}
+        <nav className="top-nav">
+          <div className="logo" onClick={() => setPage('feed')}>
+            <LogoSVG/>
+            <span className="logo-text"><span className="w">Sport</span><span className="g">Squad</span></span>
+          </div>
+          <div className="nav-right">
+            <button className="btn-post" onClick={openPostModal}>+ Post</button>
+            <button className="avatar-btn" style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }} onClick={() => setPage('profile')}>
+              {currentUser?.initials || 'ME'}
             </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const QueueModal = ({ post, onClose }) => {
-  const user = SAMPLE_USERS.find(u => u.id === post.userId) || SAMPLE_USERS[0];
-  const [players, setPlayers] = useState([{ name:"You", paid:false },{ name:"Marco R.", paid:true },{ name:"Aisha T.", paid:false }]);
-  const [newPlayer, setNewPlayer] = useState("");
-  const [totalCost, setTotalCost] = useState(post.cost ? post.cost * (post.slots || 4) : 600);
-  const [joined, setJoined] = useState(false);
-  const perPerson = players.length > 0 ? (totalCost / players.length).toFixed(2) : 0;
-  const paidCount = players.filter(p => p.paid).length;
-  const collected = (paidCount * perPerson).toFixed(2);
-  const addPlayer = () => { if (newPlayer.trim()) { setPlayers([...players, { name:newPlayer.trim(), paid:false }]); setNewPlayer(""); }};
-  const togglePaid = i => { const u = [...players]; u[i].paid = !u[i].paid; setPlayers(u); };
-  return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={onClose}>
-      <div style={{ background:"#1a1f2e", borderRadius:20, width:"100%", maxWidth:460, maxHeight:"88vh", overflowY:"auto", padding:22, border:"1px solid rgba(255,255,255,0.08)" }} onClick={e=>e.stopPropagation()}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
-          <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", fontSize:18, margin:0 }}>🎫 Queue & Cost Split</h3>
-          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.1)", border:"none", color:"#fff", borderRadius:8, padding:"4px 10px", cursor:"pointer" }}>✕</button>
-        </div>
-        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:12, marginBottom:16 }}>
-          <div style={{ color:"#aaa", fontSize:12, marginBottom:3 }}>{post.sport} · {user.name}</div>
-          <div style={{ color:"#ddd", fontSize:13 }}>{post.content}</div>
-        </div>
-        <label style={{ color:"#aaa", fontSize:12, display:"block", marginBottom:5 }}>Total Cost (₱)</label>
-        <input type="number" value={totalCost} onChange={e=>setTotalCost(+e.target.value)}
-          style={{ width:"100%", background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, padding:"10px 12px", color:"#fff", fontSize:16, marginBottom:14, boxSizing:"border-box", outline:"none" }} />
-        <div style={{ background:"linear-gradient(135deg,rgba(124,58,237,0.18),rgba(0,210,255,0.12))", border:"1px solid rgba(124,58,237,0.3)", borderRadius:14, padding:14, marginBottom:16, textAlign:"center" }}>
-          <div style={{ color:"#aaa", fontSize:11, marginBottom:2 }}>Each person pays</div>
-          <div style={{ color:"#00d2ff", fontSize:30, fontWeight:800, fontFamily:"'Syne',sans-serif" }}>₱{perPerson}</div>
-          <div style={{ color:"#aaa", fontSize:11, marginTop:3 }}>{paidCount}/{players.length} paid · ₱{collected} of ₱{totalCost} collected</div>
-          <div style={{ marginTop:8, background:"rgba(0,0,0,0.3)", borderRadius:6, overflow:"hidden", height:6 }}>
-            <div style={{ width:`${players.length?(paidCount/players.length)*100:0}%`, height:"100%", background:"linear-gradient(90deg,#00d2ff,#7c3aed)", transition:"width 0.4s" }} />
           </div>
-        </div>
-        <div style={{ color:"#aaa", fontSize:12, marginBottom:8 }}>Players ({players.length})</div>
-        {players.map((p,i) => (
-          <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"9px 12px", background:"rgba(255,255,255,0.04)", borderRadius:10, marginBottom:5, border:`1px solid ${p.paid?"rgba(0,210,255,0.25)":"rgba(255,255,255,0.05)"}` }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <div style={{ width:7, height:7, borderRadius:"50%", background:p.paid?"#00d2ff":"#444" }} />
-              <span style={{ color:p.paid?"#fff":"#aaa", fontSize:13 }}>{p.name}</span>
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <span style={{ color:p.paid?"#00d2ff":"#555", fontSize:11 }}>₱{perPerson}</span>
-              <button onClick={()=>togglePaid(i)} style={{ background:p.paid?"rgba(0,210,255,0.12)":"rgba(255,255,255,0.07)", border:`1px solid ${p.paid?"#00d2ff":"rgba(255,255,255,0.12)"}`, borderRadius:7, padding:"3px 9px", color:p.paid?"#00d2ff":"#aaa", fontSize:10, cursor:"pointer" }}>
-                {p.paid?"✓ Paid":"Mark Paid"}
-              </button>
-            </div>
-          </div>
-        ))}
-        <div style={{ display:"flex", gap:8, margin:"12px 0" }}>
-          <input value={newPlayer} onChange={e=>setNewPlayer(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addPlayer()} placeholder="Add player..."
-            style={{ flex:1, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"9px 12px", color:"#fff", fontSize:13, outline:"none" }} />
-          <button onClick={addPlayer} style={{ background:"#7c3aed", border:"none", borderRadius:10, padding:"9px 14px", color:"#fff", fontWeight:700, cursor:"pointer" }}>+ Add</button>
-        </div>
-        <button onClick={()=>setJoined(true)} style={{ width:"100%", background:joined?"#00d2ff":"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"none", borderRadius:13, padding:"13px", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Syne',sans-serif" }}>
-          {joined?"✓ You're In the Queue!":"Join Queue"}
-        </button>
-      </div>
-    </div>
-  );
-};
+        </nav>
 
-export default function SportSquad() {
-  const [tab, setTab] = useState("feed");
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [authMode, setAuthMode] = useState("login");
-  const [myProfile, setMyProfile] = useState(null);
-  const [queuePost, setQueuePost] = useState(null);
-  const [followed, setFollowed] = useState([]);
-  const [joinedSquads, setJoinedSquads] = useState([]);
-  const [feedLikes, setFeedLikes] = useState({});
-  const [showCreate, setShowCreate] = useState(false);
-  const [newPost, setNewPost] = useState({ content:"", sport:"", type:"post", cost:"", slots:"" });
-  const [feedPosts, setFeedPosts] = useState(INITIAL_FEED);
-  const [searchQ, setSearchQ] = useState("");
-  const [editProfile, setEditProfile] = useState(false);
-  const [profileEdit, setProfileEdit] = useState({});
-  const [signupData, setSignupData] = useState({ name:"", email:"", password:"", sports:[] });
-  const [loginEmail, setLoginEmail] = useState("");
-  
-  const [loginPass, setLoginPass] = useState("");
-  const [commentPost, setCommentPost] = useState(null);
-  const [sharePost, setSharePost] = useState(null);
-  const [allComments, setAllComments] = useState(INITIAL_COMMENTS);
-  const photoInputRef = React.useRef(null);
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setMyProfile(p => ({ ...p, photo: ev.target.result }));
-    };
-    reader.readAsDataURL(file);
-  };
-  const addComment = (postId, comment) => {
-    setAllComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), comment] }));
-    setFeedPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments + 1 } : p));
-  };
-
-  const handleSignup = () => {
-    if (!signupData.name || !signupData.email) return;
-    setMyProfile({ id:99, name:signupData.name, handle:"@"+signupData.name.toLowerCase().replace(/\s/g,""), avatar:signupData.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase(), sports:signupData.sports, bio:"Sports lover 🏆", followers:0, following:0, cover:"#1a3a47", photo:null });
-    setLoggedIn(true);
-  };
-  const handleLogin = () => { setMyProfile({ ...SAMPLE_USERS[0], id:99, photo:null }); setLoggedIn(true); };
-  const toggleSport = s => setSignupData(p=>({ ...p, sports:p.sports.includes(s)?p.sports.filter(x=>x!==s):[...p.sports,s] }));
-  const toggleFollow = id => setFollowed(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-  const toggleLike = id => setFeedLikes(p=>({ ...p,[id]:!p[id] }));
-  const toggleSquad = id => setJoinedSquads(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-  const handlePost = () => {
-    if (!newPost.content||!newPost.sport) return;
-    setFeedPosts([{ id:Date.now(), userId:99, type:newPost.type, content:newPost.content, sport:newPost.sport, likes:0, comments:0, time:"Just now", ...(newPost.type==="queue"?{slots:+newPost.slots||4,cost:+newPost.cost||0}:{}) }, ...feedPosts]);
-    setNewPost({ content:"", sport:"", type:"post", cost:"", slots:"" });
-    setShowCreate(false);
-  };
-
-  const filteredUsers = SAMPLE_USERS.filter(u => u.name.toLowerCase().includes(searchQ.toLowerCase()) || u.sports.some(s=>s.toLowerCase().includes(searchQ.toLowerCase())));
-
-  const inp = (extra={}) => ({ outline:"none", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, padding:"11px 14px", color:"#fff", fontSize:14, width:"100%", boxSizing:"border-box", ...extra });
-  const btn = (bg, extra={}) => ({ background:bg, border:"none", borderRadius:12, padding:"12px", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", width:"100%", fontFamily:"'Syne',sans-serif", ...extra });
-
-  if (!loggedIn) return (
-    <div style={{ minHeight:"100vh", background:"#0d1117", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20, fontFamily:"'DM Sans',sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap'); *{box-sizing:border-box} input::placeholder,textarea::placeholder{color:#555}`}</style>
-      <div style={{ textAlign:"center", marginBottom:28 }}>
-        <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ marginBottom:10 }}>
-          <circle cx="26" cy="26" r="24" stroke="url(#alg)" strokeWidth="2.2"/>
-          <line x1="26" y1="2" x2="26" y2="50" stroke="url(#alg)" strokeWidth="1.5"/>
-          <line x1="2" y1="26" x2="50" y2="26" stroke="url(#alg)" strokeWidth="1.5"/>
-          <ellipse cx="26" cy="26" rx="11" ry="24" stroke="url(#alg)" strokeWidth="1.5"/>
-          <defs><linearGradient id="alg" x1="0" y1="0" x2="52" y2="52" gradientUnits="userSpaceOnUse"><stop stopColor="#7c3aed"/><stop offset="1" stopColor="#00d2ff"/></linearGradient></defs>
-        </svg>
-        <h1 style={{ fontFamily:"'Syne',sans-serif", fontSize:34, fontWeight:800, color:"#fff", margin:0, letterSpacing:-1 }}>Sport<span style={{ background:"linear-gradient(90deg,#7c3aed,#00d2ff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Squad</span></h1>
-        <p style={{ color:"#555", fontSize:13, margin:"6px 0 0" }}>Connect · Play · Squad Up</p>
-      </div>
-      <div style={{ width:"100%", maxWidth:400, background:"#161b27", borderRadius:20, padding:24, border:"1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ display:"flex", gap:6, marginBottom:22, background:"rgba(255,255,255,0.04)", borderRadius:12, padding:4 }}>
-          {["login","signup"].map(m=>(
-            <button key={m} onClick={()=>setAuthMode(m)} style={{ flex:1, background:authMode===m?"#7c3aed":"transparent", border:"none", borderRadius:9, padding:"9px", color:authMode===m?"#fff":"#555", fontWeight:700, cursor:"pointer", fontSize:13, transition:"all 0.2s", textTransform:"capitalize" }}>{m==="login"?"Log In":"Sign Up"}</button>
-          ))}
-        </div>
-        {authMode==="login"?(
-          <>
-            <input value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} placeholder="Email" style={{...inp(), marginBottom:10}} />
-            <input type="password" value={loginPass} onChange={e=>setLoginPass(e.target.value)} placeholder="Password" style={{...inp(), marginBottom:18}} />
-            <button onClick={handleLogin} style={btn("linear-gradient(135deg,#7c3aed,#00d2ff)")}>Log In</button>
-            <p style={{ color:"#444", fontSize:11, textAlign:"center", marginTop:10 }}>Demo: any email/password works</p>
-          </>
-        ):(
-          <>
-            <input value={signupData.name} onChange={e=>setSignupData(p=>({...p,name:e.target.value}))} placeholder="Full Name" style={{...inp(),marginBottom:10}} />
-            <input value={signupData.email} onChange={e=>setSignupData(p=>({...p,email:e.target.value}))} placeholder="Email" style={{...inp(),marginBottom:10}} />
-            <input type="password" value={signupData.password} onChange={e=>setSignupData(p=>({...p,password:e.target.value}))} placeholder="Password" style={{...inp(),marginBottom:14}} />
-            <div style={{ marginBottom:16 }}>
-              <div style={{ color:"#888", fontSize:12, marginBottom:8 }}>Pick your sports:</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:6, maxHeight:130, overflowY:"auto", paddingRight:2 }}>
-                {SPORTS.map(s=>(
-                  <button key={s} onClick={()=>toggleSport(s)} style={{ background:signupData.sports.includes(s)?"#7c3aed":"rgba(255,255,255,0.05)", border:`1px solid ${signupData.sports.includes(s)?"#7c3aed":"rgba(255,255,255,0.1)"}`, borderRadius:20, padding:"4px 10px", color:"#fff", fontSize:11, cursor:"pointer", flexShrink:0 }}>{s}</button>
-                ))}
+        {/* ââ FEED PAGE ââ */}
+        {page === 'feed' && (
+          <div className="page-wrap">
+            <div className="stories">
+              <div className="story" onClick={() => showToast('Your story')}>
+                <div className="story-ring">
+                  <div className="story-inner" style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}>{currentUser?.initials}</div>
+                </div>
+                <span>You</span>
               </div>
-            </div>
-            <button onClick={handleSignup} style={btn("linear-gradient(135deg,#7c3aed,#00d2ff)")}>Create Account</button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-
-  const tabs = [{ id:"feed",icon:"🏠",label:"Feed" },{ id:"squads",icon:"👥",label:"Squads" },{ id:"discover",icon:"🔍",label:"Discover" },{ id:"profile",icon:"👤",label:"Profile" }];
-
-  return (
-    <div style={{ minHeight:"100vh", background:"#0d1117", fontFamily:"'DM Sans',sans-serif", maxWidth:480, margin:"0 auto", position:"relative" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap'); *{box-sizing:border-box} input,textarea{outline:none} input::placeholder,textarea::placeholder{color:#555} ::-webkit-scrollbar{width:0} .cam-overlay{opacity:0!important} div:hover>.cam-overlay{opacity:1!important}`}</style>
-      {queuePost && <QueueModal post={queuePost} onClose={()=>setQueuePost(null)} />}
-      {commentPost && <CommentsModal post={commentPost} onClose={()=>setCommentPost(null)} myProfile={myProfile} allComments={allComments} onAddComment={addComment} />}
-      {sharePost && <ShareModal post={sharePost} onClose={()=>setSharePost(null)} />}
-
-      {/* Header */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:"rgba(13,17,23,0.94)", backdropFilter:"blur(12px)", borderBottom:"1px solid rgba(255,255,255,0.05)", padding:"11px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <circle cx="11" cy="11" r="10" stroke="url(#lg)" strokeWidth="1.8"/>
-            <line x1="11" y1="1" x2="11" y2="21" stroke="url(#lg)" strokeWidth="1.2"/>
-            <line x1="1" y1="11" x2="21" y2="11" stroke="url(#lg)" strokeWidth="1.2"/>
-            <ellipse cx="11" cy="11" rx="4.5" ry="10" stroke="url(#lg)" strokeWidth="1.2"/>
-            <defs><linearGradient id="lg" x1="0" y1="0" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stopColor="#7c3aed"/><stop offset="1" stopColor="#00d2ff"/></linearGradient></defs>
-          </svg>
-          <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, color:"#fff", fontSize:17, letterSpacing:-0.5 }}>Sport<span style={{ background:"linear-gradient(90deg,#7c3aed,#00d2ff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Squad</span></span>
-        </div>
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          <button onClick={()=>setShowCreate(true)} style={{ background:"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"none", borderRadius:9, padding:"6px 13px", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>+ Post</button>
-          {myProfile && <Avatar user={myProfile} size={34} />}
-        </div>
-      </div>
-
-      {/* Create Post Sheet */}
-      {showCreate && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:200, display:"flex", alignItems:"flex-end" }} onClick={()=>setShowCreate(false)}>
-          <div style={{ background:"#1a1f2e", borderRadius:"18px 18px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:22, border:"1px solid rgba(255,255,255,0.07)" }} onClick={e=>e.stopPropagation()}>
-            <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", margin:"0 0 14px", fontSize:17 }}>Create Post</h3>
-            <div style={{ display:"flex", gap:7, marginBottom:12, background:"rgba(255,255,255,0.04)", borderRadius:10, padding:3 }}>
-              {["post","queue"].map(t=>(
-                <button key={t} onClick={()=>setNewPost(p=>({...p,type:t}))} style={{ flex:1, background:newPost.type===t?"#7c3aed":"transparent", border:"none", borderRadius:8, padding:"8px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
-                  {t==="post"?"📢 Post":"🎫 Queue Event"}
-                </button>
+              {storyUsers.map(u => (
+                <div key={u.name} className="story" onClick={() => showToast(`${u.name}'s story`)}>
+                  <div className="story-ring"><div className="story-inner" style={{ background: u.color }}>{u.initials}</div></div>
+                  <span>{u.name}</span>
+                </div>
               ))}
             </div>
-            <textarea value={newPost.content} onChange={e=>setNewPost(p=>({...p,content:e.target.value}))} placeholder="What's happening in your sport world?" rows={3}
-              style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, padding:"11px", color:"#fff", fontSize:14, resize:"none", marginBottom:10 }} />
-            <select value={newPost.sport} onChange={e=>setNewPost(p=>({...p,sport:e.target.value}))}
-              style={{ width:"100%", background:"#1a1f2e", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, padding:"11px 14px", color:newPost.sport?"#fff":"#555", fontSize:14, marginBottom:10, appearance:"none" }}>
-              <option value="" disabled>Select sport...</option>
-              {SPORTS.map(s=><option key={s} value={s} style={{ background:"#1a1f2e" }}>{s}</option>)}
-            </select>
-            {newPost.type==="queue" && (
-              <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-                <input type="number" value={newPost.cost} onChange={e=>setNewPost(p=>({...p,cost:e.target.value}))} placeholder="₱ cost/person"
-                  style={{ flex:1, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"10px 12px", color:"#fff", fontSize:13 }} />
-                <input type="number" value={newPost.slots} onChange={e=>setNewPost(p=>({...p,slots:e.target.value}))} placeholder="Slots"
-                  style={{ width:85, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"10px 12px", color:"#fff", fontSize:13 }} />
+            {posts.length === 0
+              ? <div className="empty-state"><div className="icon">ð­</div><p>No posts yet. Be the first!</p></div>
+              : posts.map(p => <PostCard key={p.id} post={p} onLike={toggleLike} onJoinQueue={joinQueue} onShare={sharePost}/>)
+            }
+          </div>
+        )}
+
+        {/* ââ SQUADS PAGE ââ */}
+        {page === 'squads' && (
+          <div className="page-wrap">
+            <div className="section-header">
+              <h2>Your Squads</h2>
+              <p>Groups, clubs &amp; your tribe</p>
+            </div>
+            {SQUADS_DATA.map(s => (
+              <div key={s.name} className="squad-card">
+                <div className="squad-header">
+                  <div>
+                    <div className="squad-name">{s.sport} {s.name}</div>
+                    <div className="squad-sport">{s.members} members</div>
+                  </div>
+                  <button className="btn-join">Join</button>
+                </div>
+                <div className="squad-desc">{s.desc}</div>
+                <div className="squad-meta">
+                  <div className="squad-meta-item"><label>Next Game</label><span>{s.nextGame}</span></div>
+                  <div className="squad-meta-item"><label>ð Venue</label><span>{s.venue}</span></div>
+                </div>
+                <button className="btn-squad-action" onClick={() => showToast('Queue & split costs coming soon!')}>ðï¸ Queue &amp; Split Costs</button>
               </div>
+            ))}
+            <div style={{ padding: '0 12px 12px' }}>
+              <button className="btn-squad-action" onClick={() => showToast('Create squad coming soon!')}>+ Create New Squad</button>
+            </div>
+          </div>
+        )}
+
+        {/* ââ DISCOVER PAGE ââ */}
+        {page === 'discover' && (
+          <div className="page-wrap">
+            <div className="search-bar">
+              <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" placeholder="Search players, sports..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}/>
+            </div>
+            <div style={{ padding: '0 16px 8px', fontSize: 13, fontWeight: 600, color: 'var(--muted2)' }}>Browse by Sport</div>
+            <div className="sport-chips">
+              {SPORTS.map(s => (
+                <div key={s} className={`chip${activeSport === s ? ' active' : ''}`} onClick={() => setActiveSport(activeSport === s ? '' : s)}>{s}</div>
+              ))}
+            </div>
+            <div className="discover-section">
+              <h3>Players You May Know</h3>
+              {filteredPlayers.map(p => (
+                <div key={p.handle} className="player-card">
+                  <div className="player-info">
+                    <div className="player-avatar" style={{ background: p.color }}>{p.initials}</div>
+                    <div>
+                      <div className="player-name">{p.name}</div>
+                      <div className="player-meta">{p.handle} Â· {p.followers} followers</div>
+                      <div className="player-sports">{p.sports.map(s => <span key={s} className="sport-mini">{s}</span>)}</div>
+                    </div>
+                  </div>
+                  <button
+                    className={following[p.handle] ? 'btn-following' : 'btn-follow'}
+                    onClick={() => setFollowing(prev => ({ ...prev, [p.handle]: !prev[p.handle] }))}>
+                    {following[p.handle] ? 'Following' : 'Follow'}
+                  </button>
+                </div>
+              ))}
+              {filteredPlayers.length === 0 && <div className="empty-state"><div className="icon">ð</div><p>No players found</p></div>}
+            </div>
+          </div>
+        )}
+
+        {/* ââ PROFILE PAGE ââ */}
+        {page === 'profile' && (
+          <div className="page-wrap" style={{ paddingTop: 0 }}>
+            <div className="profile-banner"/>
+            <div className="profile-info">
+              <div className="profile-avatar-wrap">
+                <div className="profile-avatar" style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}>{currentUser?.initials}</div>
+                <div className="profile-avatar-add">+</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div>
+                  <div className="profile-name">{currentUser?.name}</div>
+                  <div className="profile-handle">{currentUser?.handle}</div>
+                  <div className="profile-bio">{currentUser?.bio}</div>
+                </div>
+                <button className="btn-outline" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => showToast('Edit coming soon!')}>Edit</button>
+              </div>
+              <div className="profile-stats">
+                <div className="stat-item"><strong>{currentUser?.followers}</strong><span>Followers</span></div>
+                <div className="stat-item"><strong>{currentUser?.following}</strong><span>Following</span></div>
+                <div className="stat-item"><strong>{currentUser?.squads}</strong><span>Squads</span></div>
+              </div>
+              <div className="my-sports">
+                <h4>My Sports</h4>
+                <div className="sports-chips">
+                  {(currentUser?.sports || []).length > 0
+                    ? (currentUser.sports).map(s => <span key={s} className="chip active" style={{ padding: '4px 12px', fontSize: 12 }}>{s}</span>)
+                    : <span style={{ color: 'var(--muted2)', fontSize: 13 }}>No sports added yet</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            {/* ââ HEALTH SECTION ââ */}
+            <div className="divider" style={{ margin: '0 16px' }}/>
+            <div className="health-section">
+              <div className="health-header">
+                <h3>â¡ Steps &amp; Activity</h3>
+                <div className="device-status">
+                  <div className={`device-dot${deviceConnected ? ' connected' : ''}`}/>
+                  <span>{deviceConnected ? connectedDevice : 'No device'}</span>
+                </div>
+              </div>
+
+              {!deviceConnected && (
+                <div className="connect-bar">
+                  <div className="connect-bar-info">
+                    <h4>Connect Health Device</h4>
+                    <p>Sync data from your wearable</p>
+                  </div>
+                  <button className="btn-connect" onClick={() => setShowDeviceModal(true)}>Connect</button>
+                </div>
+              )}
+
+              <div className="health-cards">
+                <div className="health-card">
+                  <div className="health-card-icon">ð</div>
+                  <div className="health-card-value">{todayRec ? todayRec.steps.toLocaleString() : '0'}</div>
+                  <div className="health-card-unit">steps today</div>
+                  <div className="health-card-label">Goal: 10,000</div>
+                </div>
+                <div className="health-card">
+                  <div className="health-card-icon">ð¥</div>
+                  <div className="health-card-value">{todayRec ? todayRec.calories.toLocaleString() : '0'}</div>
+                  <div className="health-card-unit">kcal burned</div>
+                  <div className="health-card-label">Active burn</div>
+                </div>
+                <div className="health-card">
+                  <div className="health-card-icon">â±ï¸</div>
+                  <div className="health-card-value">{todayRec ? todayRec.active : '0'}</div>
+                  <div className="health-card-unit">active mins</div>
+                  <div className="health-card-label">Today</div>
+                </div>
+                <div className="health-card">
+                  <div className="health-card-icon">ð</div>
+                  <div className="health-card-value">{getWeeklyAvg().toLocaleString()}</div>
+                  <div className="health-card-unit">avg steps</div>
+                  <div className="health-card-label">This week</div>
+                </div>
+              </div>
+
+              <div className="weekly-chart">
+                <h4>Weekly Steps</h4>
+                <div className="chart-wrap">
+                  <canvas ref={chartRef} height="120" style={{ width: '100%' }}/>
+                </div>
+              </div>
+
+              <div className="log-activity">
+                <h4>Log Activity</h4>
+                <div className="log-form">
+                  <div className="form-row">
+                    <input type="date" value={logDate} onChange={e => setLogDate(e.target.value)}/>
+                    <input type="number" placeholder="Steps" value={logSteps} onChange={e => setLogSteps(e.target.value)}/>
+                  </div>
+                  <div className="form-row">
+                    <input type="number" placeholder="Calories" value={logCalories} onChange={e => setLogCalories(e.target.value)}/>
+                    <input type="number" placeholder="Active mins" value={logActive} onChange={e => setLogActive(e.target.value)}/>
+                  </div>
+                  <input type="text" placeholder="Note (e.g. Morning run)" value={logNote} onChange={e => setLogNote(e.target.value)}/>
+                  <button className="btn-grad" onClick={logActivity}>Save Activity</button>
+                </div>
+              </div>
+
+              <div className="activity-records">
+                <h4>Activity Records</h4>
+                {activityRecords.length === 0
+                  ? <div className="empty-state" style={{ padding: 20 }}><div className="icon">ð</div><p>No activity logged yet</p></div>
+                  : activityRecords.slice(0, 10).map((r, i) => (
+                    <div key={i} className="record-item">
+                      <div>
+                        <div className="record-steps">{r.steps.toLocaleString()} steps</div>
+                        <div className="record-date">{formatDate(r.date)}{r.note ? ' Â· ' + r.note : ''}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div className="record-cals">ð¥ {r.calories} kcal</div>
+                        <div className="record-cals">â± {r.active} mins</div>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+
+            <div style={{ padding: '0 16px' }}>
+              <div className="divider"/>
+              <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>My Posts</h4>
+              {posts.filter(p => p.userId === (currentUser?.handle || '').replace('@', '')).length === 0
+                ? <div className="empty-state"><div className="icon">ð</div><p>No posts yet. Share your first!</p></div>
+                : posts.filter(p => p.userId === (currentUser?.handle || '').replace('@', '')).map(p =>
+                    <PostCard key={p.id} post={p} onLike={toggleLike} onJoinQueue={joinQueue} onShare={sharePost}/>
+                  )
+              }
+              <div className="divider"/>
+              <button className="btn-red" style={{ width: '100%', padding: 12, marginBottom: 12 }} onClick={doLogout}>Log Out</button>
+            </div>
+          </div>
+        )}
+
+        {/* BOTTOM NAV */}
+        <nav className="bottom-nav">
+          {[
+            { id: 'feed', label: 'Feed', Icon: Icon.Feed },
+            { id: 'squads', label: 'Squads', Icon: Icon.Squads },
+            { id: 'discover', label: 'Discover', Icon: Icon.Discover },
+            { id: 'profile', label: 'Profile', Icon: Icon.Profile },
+          ].map(({ id, label, Icon: I }) => (
+            <button key={id} className={`nav-tab${page === id ? ' active' : ''}`} onClick={() => setPage(id)}>
+              <I/>{label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* ââ CREATE POST MODAL ââ */}
+      {showPostModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) closePostModal(); }}>
+          <div className="modal">
+            <h3>Create Post</h3>
+            <div className="modal-tabs">
+              <button className={`modal-tab${postTab === 'post' ? ' active' : ''}`} onClick={() => setPostTab('post')}>ð£ Post</button>
+              <button className={`modal-tab${postTab === 'queue' ? ' active' : ''}`} onClick={() => setPostTab('queue')}>ðï¸ Queue Event</button>
+            </div>
+
+            {postTab === 'post' && (
+              <>
+                <div className="media-row">
+                  <label className="media-btn" onClick={() => { if (fileInputRef.current) { fileInputRef.current.accept = 'image/*'; fileInputRef.current.click(); } }}>
+                    <Icon.Photo/> Photo
+                  </label>
+                  <label className="media-btn" onClick={() => { if (fileInputRef.current) { fileInputRef.current.accept = 'video/*'; fileInputRef.current.click(); } }}>
+                    <Icon.Video/> Video
+                  </label>
+                  <div className={`media-btn${isLive ? ' live-active' : ''}`} onClick={toggleLive}>
+                    <Icon.Live/> {liveConnecting ? '...' : isLive ? 'â¹ Stop' : 'Go Live'}
+                  </div>
+                </div>
+                <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileSelect}/>
+
+                {mediaPreviewUrl && (
+                  <div className="media-preview-wrap">
+                    {mediaType === 'image' ? <img src={mediaPreviewUrl} alt="preview"/> : <video src={mediaPreviewUrl} controls/>}
+                    <button className="remove-media-btn" onClick={removeMedia}>â</button>
+                  </div>
+                )}
+
+                {isLive && (
+                  <div className="live-preview-wrap">
+                    <div className="live-preview-header">
+                      <span className="live-badge"><span className="live-dot"/>LIVE</span>
+                      <span style={{ fontSize: 12, color: 'var(--muted2)' }}>Camera preview</span>
+                    </div>
+                    <video ref={liveVideoRef} autoPlay muted playsInline style={{ width: '100%', maxHeight: 220, objectFit: 'cover' }}/>
+                  </div>
+                )}
+
+                <textarea rows="3" placeholder="What's happening in your sport world?" style={{ marginBottom: 10, resize: 'none' }} value={postText} onChange={e => setPostText(e.target.value)}/>
+                <select style={{ marginBottom: 0 }} value={postSport} onChange={e => setPostSport(e.target.value)}>
+                  <option value="">Select sport...</option>
+                  {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </>
             )}
-            <button onClick={handlePost} style={btn("linear-gradient(135deg,#7c3aed,#00d2ff)")}>Share</button>
+
+            {postTab === 'queue' && (
+              <>
+                <textarea rows="2" placeholder="Describe your event..." style={{ marginBottom: 10, resize: 'none' }} value={queueText} onChange={e => setQueueText(e.target.value)}/>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                  <input type="number" placeholder="Price per person (â±)" value={queuePrice} onChange={e => setQueuePrice(e.target.value)}/>
+                  <input type="number" placeholder="Slots available" value={queueSlots} onChange={e => setQueueSlots(e.target.value)}/>
+                </div>
+                <input type="text" placeholder="Venue" style={{ marginBottom: 10 }} value={queueVenue} onChange={e => setQueueVenue(e.target.value)}/>
+                <select value={queueSport} onChange={e => setQueueSport(e.target.value)}>
+                  <option value="">Select sport...</option>
+                  {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button className="btn-outline" style={{ flex: 1 }} onClick={closePostModal}>Cancel</button>
+              <button className="btn-grad" style={{ flex: 2 }} onClick={submitPost}>Share</button>
+            </div>
           </div>
         </div>
       )}
 
-      <div style={{ paddingBottom:80 }}>
-        {/* ── FEED ── */}
-        {tab==="feed" && (
-          <div>
-            <div style={{ display:"flex", gap:12, overflowX:"auto", padding:"14px 14px 6px", scrollbarWidth:"none" }}>
-              {[myProfile, ...SAMPLE_USERS].filter(Boolean).map((u,i)=>(
-                <div key={u.id+"-"+i} style={{ flexShrink:0, textAlign:"center" }}>
-                  <div style={{ width:54, height:54, borderRadius:"50%", padding:2, background:"linear-gradient(135deg,#7c3aed,#00d2ff)", marginBottom:3 }}>
-                    <div style={{ width:"100%", height:"100%", borderRadius:"50%", background:"#1a1f2e", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <Avatar user={u} size={50} />
-                    </div>
+      {/* ââ CONNECT DEVICE MODAL ââ */}
+      {showDeviceModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowDeviceModal(false); }}>
+          <div className="modal">
+            <h3>Connect Health Device</h3>
+            <p style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: 14 }}>Select your wearable to sync activity data</p>
+            <div className="device-list">
+              {DEVICES_DATA.map((d, i) => (
+                <div key={d.name} className="device-item" onClick={() => connectingIdx === null && connectDevice(i)}>
+                  <div>
+                    <div className="device-name">{connectingIdx === i ? `Connecting to ${d.name}...` : d.name}</div>
+                    <div className="device-type">{connectingIdx === i ? 'Please wait' : d.type}</div>
                   </div>
-                  <div style={{ color:"#666", fontSize:9, width:54, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.name.split(" ")[0]}</div>
+                  {connectingIdx === i
+                    ? <div className="connecting-spinner"/>
+                    : <span style={{ fontSize: 26 }}>{d.icon}</span>
+                  }
                 </div>
               ))}
             </div>
-            {feedPosts.map(post=>{
-              const user = post.userId===99 ? myProfile : SAMPLE_USERS.find(u=>u.id===post.userId);
-              if (!user) return null;
-              return (
-                <div key={post.id} style={{ background:"#161b27", borderBottom:"1px solid rgba(255,255,255,0.04)", marginBottom:2 }}>
-                  <div style={{ padding:"13px 14px 8px", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                    <div style={{ display:"flex", gap:9 }}>
-                      <Avatar user={user} size={40} />
-                      <div>
-                        <div style={{ color:"#fff", fontWeight:700, fontSize:14 }}>{user.name}</div>
-                        <div style={{ color:"#555", fontSize:11 }}>{user.handle} · {post.time}</div>
-                      </div>
-                    </div>
-                    <span style={{ background:"rgba(255,255,255,0.05)", borderRadius:20, padding:"3px 9px", fontSize:10, color:"#888" }}>{post.sport}</span>
-                  </div>
-                  <div style={{ padding:"0 14px 10px", color:"#ccc", fontSize:14, lineHeight:1.5 }}>{post.content}</div>
-                  {post.type==="queue" && (
-                    <div style={{ margin:"0 14px 10px", background:"linear-gradient(135deg,rgba(124,58,237,0.14),rgba(0,210,255,0.08))", border:"1px solid rgba(124,58,237,0.28)", borderRadius:13, padding:"11px 13px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <div>
-                        <div style={{ color:"#a78bfa", fontWeight:700, fontSize:12 }}>🎫 Queue Event</div>
-                        <div style={{ color:"#777", fontSize:11, marginTop:2 }}>₱{post.cost}/person · {post.slots} slots left</div>
-                      </div>
-                      <button onClick={()=>setQueuePost(post)} style={{ background:"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"none", borderRadius:9, padding:"7px 13px", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}>Join Queue</button>
-                    </div>
-                  )}
-                  <div style={{ padding:"3px 14px 12px", display:"flex", gap:18 }}>
-                    <button onClick={()=>toggleLike(post.id)} style={{ background:"none", border:"none", color:feedLikes[post.id]?"#e63946":"#555", fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
-                      {feedLikes[post.id]?"❤️":"🤍"} {post.likes+(feedLikes[post.id]?1:0)}
-                    </button>
-                    <button onClick={()=>setCommentPost(post)} style={{ background:"none", border:"none", color:commentPost && commentPost.id===post.id?"#7c3aed":"#555", fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>💬 {(allComments[post.id]||[]).length > 0 ? (allComments[post.id]||[]).length : post.comments}</button>
-                    <button onClick={()=>setSharePost(post)} style={{ background:"none", border:"none", color:"#555", fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>↗ Share</button>
-                  </div>
-                </div>
-              );
-            })}
+            <button className="btn-outline" style={{ width: '100%' }} onClick={() => setShowDeviceModal(false)}>Cancel</button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── SQUADS ── */}
-        {tab==="squads" && (
-          <div style={{ padding:14 }}>
-            <h2 style={{ fontFamily:"'Syne',sans-serif", color:"#fff", fontSize:19, margin:"0 0 3px" }}>Your Squads</h2>
-            <p style={{ color:"#555", fontSize:12, margin:"0 0 18px" }}>Groups, clubs & your tribe</p>
-            {SAMPLE_SQUADS.map(sq=>(
-              <div key={sq.id} style={{ background:"#161b27", borderRadius:16, padding:15, marginBottom:10, border:"1px solid rgba(255,255,255,0.05)" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:7 }}>
-                  <div>
-                    <div style={{ color:"#fff", fontWeight:700, fontSize:15, fontFamily:"'Syne',sans-serif" }}>{sq.name}</div>
-                    <div style={{ color:"#555", fontSize:11 }}>{sq.sport} · {sq.members} members</div>
-                  </div>
-                  <button onClick={()=>toggleSquad(sq.id)} style={{ background:joinedSquads.includes(sq.id)?"rgba(0,210,255,0.12)":"rgba(124,58,237,0.12)", border:`1px solid ${joinedSquads.includes(sq.id)?"#00d2ff":"#7c3aed"}`, borderRadius:9, padding:"6px 11px", color:joinedSquads.includes(sq.id)?"#00d2ff":"#a78bfa", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                    {joinedSquads.includes(sq.id)?"✓ Joined":"Join"}
-                  </button>
-                </div>
-                <p style={{ color:"#888", fontSize:12, margin:"0 0 9px", lineHeight:1.4 }}>{sq.desc}</p>
-                <div style={{ display:"flex", gap:7 }}>
-                  <div style={{ background:"rgba(0,210,255,0.07)", border:"1px solid rgba(0,210,255,0.18)", borderRadius:10, padding:"7px 11px", flex:1 }}>
-                    <div style={{ color:"#00d2ff", fontSize:10, marginBottom:1 }}>📅 Next Game</div>
-                    <div style={{ color:"#fff", fontSize:11, fontWeight:600 }}>{sq.nextGame}</div>
-                  </div>
-                  <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, padding:"7px 11px", flex:1 }}>
-                    <div style={{ color:"#666", fontSize:10, marginBottom:1 }}>📍 Venue</div>
-                    <div style={{ color:"#ccc", fontSize:11 }}>{sq.venue}</div>
-                  </div>
-                </div>
-                <button onClick={()=>setQueuePost({ id:sq.id, userId:1, type:"queue", content:`${sq.name} — ${sq.nextGame} at ${sq.venue}`, sport:sq.sport, cost:150, slots:sq.members })}
-                  style={{ marginTop:9, width:"100%", background:"rgba(124,58,237,0.1)", border:"1px solid rgba(124,58,237,0.25)", borderRadius:9, padding:"9px", color:"#a78bfa", fontSize:12, fontWeight:700, cursor:"pointer" }}>
-                  🎫 Queue & Split Costs
-                </button>
-              </div>
-            ))}
-            <button style={{ width:"100%", background:"rgba(255,255,255,0.03)", border:"2px dashed rgba(255,255,255,0.1)", borderRadius:14, padding:"14px", color:"#555", fontSize:13, cursor:"pointer" }}>
-              + Create New Squad
-            </button>
-          </div>
-        )}
-
-        {/* ── DISCOVER ── */}
-        {tab==="discover" && (
-          <div style={{ padding:14 }}>
-            <div style={{ position:"relative", marginBottom:14 }}>
-              <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:"#555", fontSize:15 }}>🔍</span>
-              <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search players, sports..."
-                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", borderRadius:13, padding:"11px 14px 11px 38px", color:"#fff", fontSize:14 }} />
-            </div>
-            {!searchQ && (
-              <div style={{ marginBottom:18 }}>
-                <div style={{ color:"#666", fontSize:12, marginBottom:9 }}>Browse by Sport</div>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
-                  {SPORTS.map(s=>(
-                    <button key={s} onClick={()=>setSearchQ(s.split(" ")[1])} style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:20, padding:"5px 11px", color:"#888", fontSize:11, cursor:"pointer" }}>{s}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div style={{ color:"#666", fontSize:12, marginBottom:10 }}>{searchQ?`Results for "${searchQ}"`:"Players You May Know"}</div>
-            {filteredUsers.map(u=>(
-              <div key={u.id} style={{ background:"#161b27", borderRadius:14, padding:13, marginBottom:9, border:"1px solid rgba(255,255,255,0.05)", display:"flex", alignItems:"center", gap:11 }}>
-                <Avatar user={u} size={48} />
-                <div style={{ flex:1 }}>
-                  <div style={{ color:"#fff", fontWeight:700, fontSize:14 }}>{u.name}</div>
-                  <div style={{ color:"#555", fontSize:11, marginBottom:4 }}>{u.handle} · {u.followers} followers</div>
-                  <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-                    {u.sports.map(s=><span key={s} style={{ background:"rgba(124,58,237,0.13)", borderRadius:20, padding:"2px 7px", fontSize:9, color:"#a78bfa" }}>{s}</span>)}
-                  </div>
-                </div>
-                <button onClick={()=>toggleFollow(u.id)} style={{ background:followed.includes(u.id)?"rgba(0,210,255,0.1)":"linear-gradient(135deg,#7c3aed,#00d2ff)", border:followed.includes(u.id)?"1px solid #00d2ff":"none", borderRadius:10, padding:"7px 12px", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
-                  {followed.includes(u.id)?"✓ Following":"Follow"}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── PROFILE ── */}
-        {tab==="profile" && myProfile && (
-          <div>
-            <div style={{ height:110, background:`linear-gradient(135deg,${myProfile.cover},#7c3aed44)`, position:"relative" }}>
-              <div style={{ position:"absolute", bottom:-22, left:14 }}>
-                <div style={{ position:"relative", display:"inline-block", cursor:"pointer" }}
-                  onClick={() => photoInputRef.current && photoInputRef.current.click()}>
-                  <div style={{ border:"3px solid #0d1117", borderRadius:"50%", overflow:"hidden" }}>
-                    <Avatar user={myProfile} size={60} />
-                  </div>
-                  {/* Camera overlay on hover */}
-                  <div className="cam-overlay" style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.2s", pointerEvents:"none" }}>
-                    <span style={{ fontSize:18 }}>📷</span>
-                  </div>
-                  {/* Small + badge */}
-                  <div style={{ position:"absolute", bottom:2, right:2, width:18, height:18, borderRadius:"50%", background:"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"2px solid #0d1117", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <span style={{ color:"#fff", fontSize:10, fontWeight:800, lineHeight:1 }}>+</span>
-                  </div>
-                </div>
-                <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display:"none" }} />
-              </div>
-            </div>
-            <div style={{ padding:"30px 14px 14px" }}>
-              {!editProfile ? (
-                <>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-                    <div>
-                      <div style={{ color:"#fff", fontWeight:800, fontSize:19, fontFamily:"'Syne',sans-serif" }}>{myProfile.name}</div>
-                      <div style={{ color:"#555", fontSize:12 }}>{myProfile.handle}</div>
-                    </div>
-                    <button onClick={()=>{ setEditProfile(true); setProfileEdit({ name:myProfile.name, bio:myProfile.bio, sports:[...myProfile.sports] }); }} style={{ background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"7px 12px", color:"#aaa", fontSize:12, cursor:"pointer" }}>Edit</button>
-                  </div>
-                  <p style={{ color:"#888", fontSize:13, margin:"0 0 14px", lineHeight:1.5 }}>{myProfile.bio}</p>
-                  <div style={{ display:"flex", gap:18, marginBottom:16 }}>
-                    {[["Followers", myProfile.followers+followed.length],["Following", myProfile.following],["Squads", joinedSquads.length]].map(([l,v])=>(
-                      <div key={l} style={{ textAlign:"center" }}>
-                        <div style={{ color:"#fff", fontWeight:700, fontSize:17, fontFamily:"'Syne',sans-serif" }}>{v}</div>
-                        <div style={{ color:"#555", fontSize:10 }}>{l}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ marginBottom:18 }}>
-                    <div style={{ color:"#666", fontSize:12, marginBottom:7 }}>My Sports</div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
-                      {(myProfile.sports.length?myProfile.sports:["⚽ Football"]).map(s=>(
-                        <span key={s} style={{ background:"rgba(124,58,237,0.14)", border:"1px solid rgba(124,58,237,0.28)", borderRadius:20, padding:"4px 11px", fontSize:11, color:"#a78bfa" }}>{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ borderTop:"1px solid rgba(255,255,255,0.05)", paddingTop:14, marginBottom:14 }}>
-                    <div style={{ color:"#666", fontSize:12, marginBottom:10 }}>My Posts</div>
-                    {feedPosts.filter(p=>p.userId===99).length===0
-                      ? <div style={{ color:"#444", fontSize:13, textAlign:"center", padding:"16px 0" }}>No posts yet. Share your first! 🏆</div>
-                      : feedPosts.filter(p=>p.userId===99).map(post=>(
-                        <div key={post.id} style={{ background:"rgba(255,255,255,0.04)", borderRadius:11, padding:"11px 12px", marginBottom:7 }}>
-                          <div style={{ color:"#555", fontSize:10, marginBottom:3 }}>{post.sport} · {post.time}</div>
-                          <div style={{ color:"#ccc", fontSize:13 }}>{post.content}</div>
-                        </div>
-                      ))
-                    }
-                  </div>
-                  <button onClick={()=>{ setLoggedIn(false); setMyProfile(null); }} style={{ width:"100%", background:"rgba(230,57,70,0.09)", border:"1px solid rgba(230,57,70,0.25)", borderRadius:13, padding:"12px", color:"#e63946", fontSize:14, fontWeight:700, cursor:"pointer" }}>Log Out</button>
-                </>
-              ) : (
-                <div>
-                  <h3 style={{ color:"#fff", fontFamily:"'Syne',sans-serif", margin:"0 0 16px", fontSize:17 }}>Edit Profile</h3>
-                  {/* Profile photo picker */}
-                  <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:18 }}>
-                    <div style={{ position:"relative", cursor:"pointer" }} onClick={() => photoInputRef.current && photoInputRef.current.click()}>
-                      <Avatar user={myProfile} size={64} />
-                      <div style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                        <span style={{ fontSize:20 }}>📷</span>
-                      </div>
-                    </div>
-                    <div>
-                      <button onClick={() => photoInputRef.current && photoInputRef.current.click()} style={{ background:"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", display:"block", marginBottom:6 }}>
-                        📸 Upload Photo
-                      </button>
-                      {myProfile.photo && (
-                        <button onClick={() => setMyProfile(p => ({ ...p, photo: null }))} style={{ background:"rgba(230,57,70,0.1)", border:"1px solid rgba(230,57,70,0.3)", borderRadius:10, padding:"6px 12px", color:"#e63946", fontSize:11, cursor:"pointer" }}>
-                          Remove Photo
-                        </button>
-                      )}
-                      {!myProfile.photo && <div style={{ color:"#555", fontSize:11 }}>JPG, PNG, GIF supported</div>}
-                    </div>
-                  </div>
-                  <input value={profileEdit.name} onChange={e=>setProfileEdit(p=>({...p,name:e.target.value}))} placeholder="Name" style={{...inp(),marginBottom:9}} />
-                  <textarea value={profileEdit.bio} onChange={e=>setProfileEdit(p=>({...p,bio:e.target.value}))} placeholder="Bio" rows={3}
-                    style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, padding:"11px 14px", color:"#fff", fontSize:14, resize:"none", marginBottom:13, outline:"none" }} />
-                  <div style={{ marginBottom:14 }}>
-                    <div style={{ color:"#888", fontSize:12, marginBottom:8 }}>Sports</div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                      {SPORTS.map(s=>{ const sel=profileEdit.sports?.includes(s); return (
-                        <button key={s} onClick={()=>setProfileEdit(p=>({...p,sports:sel?p.sports.filter(x=>x!==s):[...(p.sports||[]),s]}))} style={{ background:sel?"#7c3aed":"rgba(255,255,255,0.05)", border:`1px solid ${sel?"#7c3aed":"rgba(255,255,255,0.09)"}`, borderRadius:20, padding:"4px 9px", color:"#fff", fontSize:10, cursor:"pointer" }}>{s}</button>
-                      );})}
-                    </div>
-                  </div>
-                  <div style={{ display:"flex", gap:7 }}>
-                    <button onClick={()=>setEditProfile(false)} style={{ flex:1, background:"rgba(255,255,255,0.05)", border:"none", borderRadius:11, padding:"11px", color:"#888", fontSize:13, cursor:"pointer" }}>Cancel</button>
-                    <button onClick={()=>{ setMyProfile(p=>({...p,...profileEdit})); setEditProfile(false); }} style={{ flex:2, background:"linear-gradient(135deg,#7c3aed,#00d2ff)", border:"none", borderRadius:11, padding:"11px", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>Save</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Nav */}
-      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(13,17,23,0.97)", backdropFilter:"blur(16px)", borderTop:"1px solid rgba(255,255,255,0.05)", display:"flex", padding:"7px 0 11px" }}>
-        {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{ flex:1, background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"3px 0" }}>
-            <span style={{ fontSize:20, filter:tab===t.id?"none":"grayscale(1) opacity(0.35)" }}>{t.icon}</span>
-            <span style={{ fontSize:9, color:tab===t.id?"#7c3aed":"#444", fontWeight:tab===t.id?700:400 }}>{t.label}</span>
-            {tab===t.id && <div style={{ width:3, height:3, borderRadius:"50%", background:"#7c3aed" }} />}
-          </button>
-        ))}
-      </div>
-    </div>
+      {/* ââ TOAST ââ */}
+      <div className={`toast${toastVisible ? ' show' : ''}`}>{toastMsg}</div>
+    </>
   );
 }
